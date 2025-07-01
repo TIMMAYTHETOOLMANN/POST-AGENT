@@ -1,0 +1,110 @@
+<html>
+<head>
+<title>error.rs</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #5f826b; font-style: italic;}
+.s4 { color: #6aab73;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+error.rs</font>
+</center></td></tr></table>
+<pre><span class="s0">use </span><span class="s1">thiserror</span><span class="s2">::</span><span class="s1">Error</span><span class="s2">;</span>
+
+<span class="s3">/// Custom error types for the TikTok cross-posting application</span>
+<span class="s2">#[</span><span class="s1">derive</span><span class="s2">(</span><span class="s1">Error</span><span class="s2">, </span><span class="s1">Debug</span><span class="s2">)]</span>
+<span class="s0">pub enum </span><span class="s1">AppError </span><span class="s2">{</span>
+    <span class="s3">/// Error when fetching content from TikTok</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to fetch TikTok content: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">TikTokFetchError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when processing content</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to process content: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">ContentProcessingError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when posting to Facebook</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to post to Facebook: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">FacebookPostError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when posting to Instagram</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to post to Instagram: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">InstagramPostError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when posting to YouTube</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to post to YouTube: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">YouTubePostError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when loading configuration</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to load configuration: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">ConfigError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when scheduling tasks</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to schedule task: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">SchedulerError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when downloading media</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to download media: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">MediaDownloadError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when uploading media</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Failed to upload media: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">MediaUploadError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when authenticating with a service</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Authentication failed: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">AuthenticationError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when rate limited by a service</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Rate limited by service: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">RateLimitError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when a required file is not found</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;File not found: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">FileNotFoundError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error when a database operation fails</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Database error: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">DatabaseError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Generic error for other cases</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;An error occurred: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">GenericError</span><span class="s2">(</span><span class="s1">String</span><span class="s2">),</span>
+    
+    <span class="s3">/// Error from an external library</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;External error: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">ExternalError</span><span class="s2">(#[</span><span class="s1">from</span><span class="s2">] </span><span class="s1">anyhow</span><span class="s2">::</span><span class="s1">Error</span><span class="s2">),</span>
+    
+    <span class="s3">/// IO error</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;IO error: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">IoError</span><span class="s2">(#[</span><span class="s1">from</span><span class="s2">] </span><span class="s1">std</span><span class="s2">::</span><span class="s1">io</span><span class="s2">::</span><span class="s1">Error</span><span class="s2">),</span>
+    
+    <span class="s3">/// Serialization/deserialization error</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;Serialization error: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">SerdeError</span><span class="s2">(#[</span><span class="s1">from</span><span class="s2">] </span><span class="s1">serde_json</span><span class="s2">::</span><span class="s1">Error</span><span class="s2">),</span>
+    
+    <span class="s3">/// HTTP request error</span>
+    <span class="s2">#[</span><span class="s1">error</span><span class="s2">(</span><span class="s4">&quot;HTTP request error: {0}&quot;</span><span class="s2">)]</span>
+    <span class="s1">HttpError</span><span class="s2">(#[</span><span class="s1">from</span><span class="s2">] </span><span class="s1">reqwest</span><span class="s2">::</span><span class="s1">Error</span><span class="s2">),</span>
+<span class="s2">}</span>
+
+<span class="s3">/// Result type alias for the application</span>
+<span class="s0">pub type </span><span class="s1">AppResult</span><span class="s2">&lt;</span><span class="s1">T</span><span class="s2">&gt; = </span><span class="s1">std</span><span class="s2">::</span><span class="s1">result</span><span class="s2">::</span><span class="s1">Result</span><span class="s2">&lt;</span><span class="s1">T</span><span class="s2">, </span><span class="s1">AppError</span><span class="s2">&gt;;</span>
+
+<span class="s3">/// Convert a string error to an AppError::GenericError</span>
+<span class="s0">pub fn </span><span class="s1">to_app_error</span><span class="s2">&lt;</span><span class="s1">E</span><span class="s2">: </span><span class="s1">std</span><span class="s2">::</span><span class="s1">fmt</span><span class="s2">::</span><span class="s1">Display</span><span class="s2">&gt;(</span><span class="s1">err</span><span class="s2">: </span><span class="s1">E</span><span class="s2">) -&gt; </span><span class="s1">AppError </span><span class="s2">{</span>
+    <span class="s1">AppError</span><span class="s2">::</span><span class="s1">GenericError</span><span class="s2">(</span><span class="s1">err</span><span class="s2">.</span><span class="s1">to_string</span><span class="s2">())</span>
+<span class="s2">}</span>
+
+<span class="s3">/// Helper function to convert any error to an AppResult</span>
+<span class="s0">pub fn </span><span class="s1">to_app_result</span><span class="s2">&lt;</span><span class="s1">T</span><span class="s2">, </span><span class="s1">E</span><span class="s2">: </span><span class="s1">std</span><span class="s2">::</span><span class="s1">fmt</span><span class="s2">::</span><span class="s1">Display</span><span class="s2">&gt;(</span><span class="s1">result</span><span class="s2">: </span><span class="s1">std</span><span class="s2">::</span><span class="s1">result</span><span class="s2">::</span><span class="s1">Result</span><span class="s2">&lt;</span><span class="s1">T</span><span class="s2">, </span><span class="s1">E</span><span class="s2">&gt;) -&gt; </span><span class="s1">AppResult</span><span class="s2">&lt;</span><span class="s1">T</span><span class="s2">&gt; {</span>
+    <span class="s1">result</span><span class="s2">.</span><span class="s1">map_err</span><span class="s2">(</span><span class="s1">to_app_error</span><span class="s2">)</span>
+<span class="s2">}</span></pre>
+</body>
+</html>

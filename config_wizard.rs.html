@@ -1,0 +1,60 @@
+<html>
+<head>
+<title>config_wizard.rs</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #cf8e6d;}
+.s1 { color: #bcbec4;}
+.s2 { color: #bcbec4;}
+.s3 { color: #6aab73;}
+.s4 { color: #7a7e85;}
+.s5 { color: #2aacb8;}
+</style>
+</head>
+<body bgcolor="#1e1f22">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#606060" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+config_wizard.rs</font>
+</center></td></tr></table>
+<pre><span class="s0">use </span><span class="s1">tiktok_crosspost</span><span class="s2">::</span><span class="s1">config_wizard</span><span class="s2">;</span>
+<span class="s0">use </span><span class="s1">std</span><span class="s2">::</span><span class="s1">process</span><span class="s2">;</span>
+
+<span class="s0">fn </span><span class="s1">main</span><span class="s2">() {</span>
+    <span class="s1">println</span><span class="s2">!(</span><span class="s3">&quot;Starting TikTok Cross-posting Configuration Wizard...&quot;</span><span class="s2">);</span>
+    
+    <span class="s0">match </span><span class="s1">config_wizard</span><span class="s2">::</span><span class="s1">run_wizard</span><span class="s2">() {</span>
+        <span class="s1">Ok</span><span class="s2">(</span><span class="s1">config</span><span class="s2">) =&gt; {</span>
+            <span class="s4">// Ask if user wants to export environment variables</span>
+            <span class="s0">let </span><span class="s1">export_env </span><span class="s2">= </span><span class="s1">dialoguer</span><span class="s2">::</span><span class="s1">Confirm</span><span class="s2">::</span><span class="s1">new</span><span class="s2">()</span>
+                <span class="s2">.</span><span class="s1">with_prompt</span><span class="s2">(</span><span class="s3">&quot;Do you want to export the configuration as environment variables to a .env file?&quot;</span><span class="s2">)</span>
+                <span class="s2">.</span><span class="s1">default</span><span class="s2">(</span><span class="s0">true</span><span class="s2">)</span>
+                <span class="s2">.</span><span class="s1">interact</span><span class="s2">()</span>
+                <span class="s2">.</span><span class="s1">unwrap_or</span><span class="s2">(</span><span class="s0">false</span><span class="s2">);</span>
+                
+            <span class="s0">if </span><span class="s1">export_env </span><span class="s2">{</span>
+                <span class="s0">let </span><span class="s1">env_path </span><span class="s2">= </span><span class="s1">dialoguer</span><span class="s2">::</span><span class="s1">Input</span><span class="s2">::&lt;</span><span class="s1">String</span><span class="s2">&gt;::</span><span class="s1">new</span><span class="s2">()</span>
+                    <span class="s2">.</span><span class="s1">with_prompt</span><span class="s2">(</span><span class="s3">&quot;Where do you want to save the .env file?&quot;</span><span class="s2">)</span>
+                    <span class="s2">.</span><span class="s1">default</span><span class="s2">(</span><span class="s3">&quot;.env&quot;</span><span class="s2">.</span><span class="s1">to_string</span><span class="s2">())</span>
+                    <span class="s2">.</span><span class="s1">interact</span><span class="s2">()</span>
+                    <span class="s2">.</span><span class="s1">unwrap_or</span><span class="s2">(</span><span class="s3">&quot;.env&quot;</span><span class="s2">.</span><span class="s1">to_string</span><span class="s2">());</span>
+                    
+                <span class="s0">match </span><span class="s1">config_wizard</span><span class="s2">::</span><span class="s1">generate_env_file</span><span class="s2">(&amp;</span><span class="s1">config</span><span class="s2">, &amp;</span><span class="s1">env_path</span><span class="s2">) {</span>
+                    <span class="s1">Ok</span><span class="s2">(</span><span class="s1">_</span><span class="s2">) =&gt; </span><span class="s1">println</span><span class="s2">!(</span><span class="s3">&quot;Environment variables exported to {}&quot;</span><span class="s2">, </span><span class="s1">env_path</span><span class="s2">),</span>
+                    <span class="s1">Err</span><span class="s2">(</span><span class="s1">e</span><span class="s2">) =&gt; {</span>
+                        <span class="s1">eprintln</span><span class="s2">!(</span><span class="s3">&quot;Failed to export environment variables: {}&quot;</span><span class="s2">, </span><span class="s1">e</span><span class="s2">);</span>
+                        <span class="s1">process</span><span class="s2">::</span><span class="s1">exit</span><span class="s2">(</span><span class="s5">1</span><span class="s2">);</span>
+                    <span class="s2">}</span>
+                <span class="s2">}</span>
+            <span class="s2">}</span>
+            
+            <span class="s1">println</span><span class="s2">!(</span><span class="s3">&quot;Configuration completed successfully!&quot;</span><span class="s2">);</span>
+        <span class="s2">},</span>
+        <span class="s1">Err</span><span class="s2">(</span><span class="s1">e</span><span class="s2">) =&gt; {</span>
+            <span class="s1">eprintln</span><span class="s2">!(</span><span class="s3">&quot;Error during configuration: {}&quot;</span><span class="s2">, </span><span class="s1">e</span><span class="s2">);</span>
+            <span class="s1">process</span><span class="s2">::</span><span class="s1">exit</span><span class="s2">(</span><span class="s5">1</span><span class="s2">);</span>
+        <span class="s2">}</span>
+    <span class="s2">}</span>
+<span class="s2">}</span></pre>
+</body>
+</html>
