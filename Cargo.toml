@@ -1,0 +1,38 @@
+[package]
+name = "tiktok-crosspost"
+version = "0.1.0"
+edition = "2024"
+description = "Application to cross-post TikTok content to other social media platforms"
+authors = ["Your Name <your.email@example.com>"]
+
+[dependencies]
+# HTTP client for API requests
+reqwest = { version = "0.11", features = ["json", "multipart"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Social media API libraries
+# We'll implement these directly using reqwest instead of relying on external crates
+google-youtube3 = "5.0"
+
+# Utilities
+chrono = "0.4"
+dotenv = "0.15"
+config = "0.13"
+log = "0.4"
+env_logger = "0.10"
+anyhow = "1.0"
+thiserror = "1.0"
+async-trait = "0.1"
+futures = "0.3"
+url = "2.3"
+rand = "0.8"
+
+# For scheduled tasks
+tokio-cron-scheduler = "0.9"
+
+# For interactive CLI
+dialoguer = "0.10.4"
+console = "0.15.7"
+clap = { version = "4.4", features = ["derive"] }
