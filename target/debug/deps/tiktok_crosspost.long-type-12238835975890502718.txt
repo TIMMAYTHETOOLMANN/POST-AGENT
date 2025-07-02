@@ -1,0 +1,1 @@
+cron::schedule::Schedule: From<&std::string::String>

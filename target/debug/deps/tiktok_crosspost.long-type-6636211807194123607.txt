@@ -1,0 +1,4 @@
+Rc<UnsafeCell<rand::rngs::adapter::reseeding::ReseedingRng<rand_chacha::chacha::ChaCha12Core, rand_core::os::OsRng>>>
+{coroutine witness@content::generate_trending_hashtags::{closure#0}}
+impl Future<Output = Result<Vec<std::string::String>, AppError>>
+impl Future<Output = Result<ProcessedContent, AppError>>
