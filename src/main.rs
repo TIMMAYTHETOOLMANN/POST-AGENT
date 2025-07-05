@@ -7,7 +7,6 @@ use tiktok_crosspost::error::{AppError, AppResult};
 use tiktok_crosspost::config_wizard;
 use log::{info, error, warn};
 use tokio::time::{interval, Duration};
-use chrono::Utc;
 use std::env;
 use clap::{Parser, Subcommand};
 use std::sync::Arc;
@@ -100,7 +99,7 @@ enum Commands {
         env: bool,
 
         /// Path to save the .env file
-        #[arg(short, long, default_value = ".env")]
+        #[arg(short = 'p', long, default_value = ".env")]
         env_path: String,
     },
 }
@@ -169,6 +168,15 @@ async fn main() -> AppResult<()> {
     // Load configuration
     let config = config::load_config()?;
     info!("Configuration loaded successfully");
+
+    // Validate configuration
+    match config::validate_config(&config) {
+        Ok(_) => info!("Configuration validation passed"),
+        Err(e) => {
+            error!("Configuration validation failed: {}", e);
+            return Err(AppError::ConfigError(format!("Configuration validation failed: {}", e)));
+        }
+    }
 
     // Initialize the scheduler database
     scheduler::init().await?;

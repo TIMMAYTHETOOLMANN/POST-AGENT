@@ -1,0 +1,27 @@
+# Rust
+target/
+Cargo.lock
+
+# IDE
+.idea/
+.vscode/
+
+# Build artifacts
+*.d
+*.rmeta
+*.pdb
+
+# Temporary files
+.env
+*.tmp
+*.temp
+
+# Downloads
+downloads/
+
+# Generated HTML files (these seem to be generated documentation)
+*.html
+
+# OS
+.DS_Store
+Thumbs.db

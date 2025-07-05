@@ -1,8 +1,7 @@
 use crate::config::AppConfig;
 use crate::error::AppResult;
-use dialoguer::{Confirm, Input, Select};
+use dialoguer::{Confirm, Input};
 use std::fs;
-use std::path::Path;
 
 /// Run the interactive configuration wizard
 pub fn run_wizard() -> AppResult<AppConfig> {
@@ -154,6 +153,36 @@ pub fn run_wizard() -> AppResult<AppConfig> {
         .with_prompt("Maximum posts per day")
         .default(config.scheduler.max_posts_per_day)
         .interact()?;
+
+    // Validate configuration before saving
+    println!("\n=== Configuration Validation ===");
+    match crate::config::validate_config(&config) {
+        Ok(_) => println!("✓ Configuration validation passed"),
+        Err(e) => {
+            println!("⚠ Configuration validation failed: {}", e);
+            let continue_anyway = Confirm::new()
+                .with_prompt("Do you want to continue with this configuration anyway?")
+                .default(false)
+                .interact()?;
+            if !continue_anyway {
+                println!("Configuration cancelled. Please run the wizard again to fix the issues.");
+                return Err(crate::error::AppError::GenericError("Configuration validation failed".to_string()));
+            }
+        }
+    }
+
+    // Test connectivity (optional)
+    let test_connectivity = Confirm::new()
+        .with_prompt("Do you want to test the configuration connectivity?")
+        .default(true)
+        .interact()?;
+
+    if test_connectivity {
+        match crate::config::test_config_connectivity(&config) {
+            Ok(_) => println!("✓ Configuration connectivity test passed"),
+            Err(e) => println!("⚠ Configuration connectivity test failed: {}", e),
+        }
+    }
 
     // Save configuration
     let save_config = Confirm::new()
