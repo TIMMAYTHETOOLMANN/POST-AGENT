@@ -146,6 +146,37 @@ The application will:
 4. Perform an initial sync of all content
 5. Keep running and monitoring for new content
 
+## Quick Start
+
+The easiest way to get started is using the launcher script:
+
+### Linux/macOS
+```bash
+./launch.sh setup
+```
+
+### Windows
+```cmd
+launch.bat setup
+```
+
+This will handle everything: dependencies, building, configuration, and validation.
+
+## Using the Launcher
+
+The launcher script provides an easy way to manage the application:
+
+```bash
+./launch.sh help                    # Show all available commands
+./launch.sh setup                   # Complete first-time setup
+./launch.sh config                  # Run configuration wizard
+./launch.sh run                     # Start the agent (foreground)
+./launch.sh start                   # Start background watcher
+./launch.sh stop                    # Stop background watcher
+./launch.sh status                  # Show current status
+./launch.sh logs                    # View recent logs
+```
+
 ## Installation
 
 ### Prerequisites

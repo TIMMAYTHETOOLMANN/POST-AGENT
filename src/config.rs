@@ -1,5 +1,5 @@
 use anyhow::Result;
-use config::{Config, ConfigError, File};
+use config::{Config, File};
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use log::info;
@@ -220,4 +220,54 @@ pub fn load_config() -> Result<AppConfig> {
 pub fn get_config() -> AppConfig {
     let config_lock = CONFIG.lock().unwrap();
     config_lock.clone().expect("Configuration not loaded. Call load_config() first.")
+}
+
+/// Validate configuration settings
+pub fn validate_config(config: &AppConfig) -> Result<()> {
+    let mut errors = Vec::new();
+
+    // TikTok validation
+    if config.tiktok.username.is_empty() {
+        errors.push("TikTok username cannot be empty");
+    }
+    if config.tiktok.api_key.is_empty() {
+        errors.push("TikTok API key cannot be empty");
+    }
+    if config.tiktok.api_secret.is_empty() {
+        errors.push("TikTok API secret cannot be empty");
+    }
+
+    // Scheduler validation
+    if config.scheduler.check_interval_minutes == 0 {
+        errors.push("Check interval must be greater than 0");
+    }
+    if config.scheduler.legacy_post_interval_minutes == 0 {
+        errors.push("Legacy post interval must be greater than 0");
+    }
+    if config.scheduler.max_posts_per_day == 0 {
+        errors.push("Max posts per day must be greater than 0");
+    }
+
+    // Content validation
+    if config.content.hashtag_count == 0 {
+        errors.push("Hashtag count must be greater than 0");
+    }
+
+    if !errors.is_empty() {
+        return Err(anyhow::anyhow!("Configuration validation failed: {}", errors.join(", ")));
+    }
+
+    Ok(())
+}
+
+/// Test configuration connectivity (placeholder for actual API tests)
+pub fn test_config_connectivity(config: &AppConfig) -> Result<()> {
+    info!("Testing configuration connectivity...");
+    
+    // Here we would normally test API connectivity
+    // For now, just validate that required fields are present
+    validate_config(config)?;
+    
+    info!("Configuration validation passed");
+    Ok(())
 }
