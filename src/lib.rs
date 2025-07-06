@@ -6,3 +6,4 @@ pub mod content;
 pub mod scheduler;
 pub mod error;
 pub mod config_wizard;
+pub mod browser;

@@ -25,6 +25,9 @@ pub struct AppConfig {
 
     /// Scheduling configuration
     pub scheduler: SchedulerConfig,
+
+    /// Browser automation configuration
+    pub browser: BrowserConfig,
 }
 
 /// TikTok API configuration
@@ -49,14 +52,20 @@ pub struct FacebookConfig {
     /// Facebook page ID
     pub page_id: String,
 
-    /// Facebook API key
+    /// Facebook API key (optional, for hybrid approach)
     pub api_key: String,
 
-    /// Facebook API secret
+    /// Facebook API secret (optional, for hybrid approach)
     pub api_secret: String,
 
-    /// Facebook access token
+    /// Facebook access token (optional, for hybrid approach)
     pub access_token: String,
+
+    /// Facebook login email for browser automation
+    pub email: String,
+
+    /// Facebook login password for browser automation
+    pub password: String,
 }
 
 /// Instagram API configuration
@@ -65,14 +74,20 @@ pub struct InstagramConfig {
     /// Instagram account ID
     pub account_id: String,
 
-    /// Instagram API key
+    /// Instagram API key (optional, for hybrid approach)
     pub api_key: String,
 
-    /// Instagram API secret
+    /// Instagram API secret (optional, for hybrid approach)
     pub api_secret: String,
 
-    /// Instagram access token
+    /// Instagram access token (optional, for hybrid approach)
     pub access_token: String,
+
+    /// Instagram login email for browser automation
+    pub email: String,
+
+    /// Instagram login password for browser automation
+    pub password: String,
 }
 
 /// YouTube API configuration
@@ -81,17 +96,23 @@ pub struct YouTubeConfig {
     /// YouTube channel ID
     pub channel_id: String,
 
-    /// YouTube API key
+    /// YouTube API key (optional, for hybrid approach)
     pub api_key: String,
 
-    /// YouTube client ID
+    /// YouTube client ID (optional, for hybrid approach)
     pub client_id: String,
 
-    /// YouTube client secret
+    /// YouTube client secret (optional, for hybrid approach)
     pub client_secret: String,
 
-    /// YouTube refresh token
+    /// YouTube refresh token (optional, for hybrid approach)
     pub refresh_token: String,
+
+    /// YouTube login email for browser automation
+    pub email: String,
+
+    /// YouTube login password for browser automation
+    pub password: String,
 }
 
 /// Content processing configuration
@@ -123,6 +144,34 @@ pub struct SchedulerConfig {
     pub max_posts_per_day: usize,
 }
 
+/// Browser automation configuration
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct BrowserConfig {
+    /// Whether to run browser in headless mode
+    pub headless: bool,
+
+    /// Timeout for page loads in seconds
+    pub page_load_timeout: u64,
+
+    /// Timeout for element waits in seconds
+    pub element_wait_timeout: u64,
+
+    /// Number of retry attempts for failed operations
+    pub max_retries: usize,
+
+    /// Delay between retry attempts in milliseconds
+    pub retry_delay_ms: u64,
+
+    /// Browser window width
+    pub window_width: u32,
+
+    /// Browser window height
+    pub window_height: u32,
+
+    /// User agent string to use
+    pub user_agent: Option<String>,
+}
+
 /// Default configuration values
 impl Default for AppConfig {
     fn default() -> Self {
@@ -138,12 +187,16 @@ impl Default for AppConfig {
                 api_key: "your_facebook_api_key".to_string(),
                 api_secret: "your_facebook_api_secret".to_string(),
                 access_token: "your_facebook_access_token".to_string(),
+                email: "your_facebook_email@example.com".to_string(),
+                password: "your_facebook_password".to_string(),
             },
             instagram: InstagramConfig {
                 account_id: "your_instagram_account_id".to_string(),
                 api_key: "your_instagram_api_key".to_string(),
                 api_secret: "your_instagram_api_secret".to_string(),
                 access_token: "your_instagram_access_token".to_string(),
+                email: "your_instagram_email@example.com".to_string(),
+                password: "your_instagram_password".to_string(),
             },
             youtube: YouTubeConfig {
                 channel_id: "your_youtube_channel_id".to_string(),
@@ -151,6 +204,8 @@ impl Default for AppConfig {
                 client_id: "your_youtube_client_id".to_string(),
                 client_secret: "your_youtube_client_secret".to_string(),
                 refresh_token: "your_youtube_refresh_token".to_string(),
+                email: "your_youtube_email@example.com".to_string(),
+                password: "your_youtube_password".to_string(),
             },
             content: ContentConfig {
                 hashtag_count: 5,
@@ -166,6 +221,16 @@ impl Default for AppConfig {
                 check_interval_minutes: 5,
                 legacy_post_interval_minutes: 10,
                 max_posts_per_day: 24,
+            },
+            browser: BrowserConfig {
+                headless: true,
+                page_load_timeout: 30,
+                element_wait_timeout: 10,
+                max_retries: 3,
+                retry_delay_ms: 2000,
+                window_width: 1920,
+                window_height: 1080,
+                user_agent: None,
             },
         }
     }
