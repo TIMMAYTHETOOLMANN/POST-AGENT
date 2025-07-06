@@ -2,7 +2,7 @@ use crate::config;
 use crate::error::{AppError, AppResult};
 use headless_chrome::protocol::cdp::Page;
 use headless_chrome::{Browser, LaunchOptionsBuilder, Tab};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;

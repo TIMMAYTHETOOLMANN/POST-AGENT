@@ -3,7 +3,6 @@ use crate::error::{AppError, AppResult};
 use crate::tiktok::TikTokVideo;
 use log::{info, debug};
 use rand::seq::SliceRandom;
-use rand::Rng;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;

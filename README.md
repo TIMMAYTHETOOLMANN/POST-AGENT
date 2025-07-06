@@ -2,6 +2,35 @@
 
 This application allows you to automatically cross-post your TikTok content to other social media platforms like Facebook, Instagram, and YouTube using **browser automation** for maximum reliability and flexibility.
 
+## 🚀 Automated Workflow
+
+This application provides a complete automated solution that:
+
+1. **📥 Scrapes all TikTok media (oldest to newest)**
+   - Fetches your entire TikTok video library
+   - Sorts videos chronologically (oldest first) for systematic posting
+   - Downloads video content and cover images locally
+
+2. **📱 Posts each video to Facebook, Instagram, and YouTube Shorts**
+   - Browser automation for reliable cross-platform posting
+   - Supports Facebook (personal/pages), Instagram (feed/stories), and YouTube Shorts
+   - Handles platform-specific formatting and requirements
+
+3. **🏷️ Adds dynamic hashtags and optimized taglines**
+   - Generates trending hashtags automatically
+   - Selects engaging taglines from customizable templates
+   - Combines original description with enhanced content
+
+4. **⏰ Posts every 10 minutes until synchronized**
+   - Configurable 10-minute intervals for legacy content posting
+   - Continues until all historical content is cross-posted
+   - Tracks posting status to avoid duplicates
+
+5. **👀 Enters "watch mode" to detect new TikTok media**
+   - Monitors for new TikTok content every 5 minutes
+   - Automatically cross-posts new videos immediately
+   - Maintains continuous synchronization
+
 ## Features
 
 - **Browser automation-based posting** for maximum reliability

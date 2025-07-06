@@ -1,7 +1,6 @@
 use crate::config;
 use crate::error::{AppError, AppResult};
-use anyhow::Result;
-use log::{info, warn, error};
+use log::info;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -214,7 +213,7 @@ async fn simulate_fetch_new_videos(username: &str) -> AppResult<Vec<TikTokVideo>
 pub async fn authenticate() -> AppResult<()> {
     info!("Authenticating with TikTok API");
     
-    let config = config::get_config();
+    let _config = config::get_config();
     
     // In a real implementation, this would use the TikTok API for authentication
     // For now, we'll just simulate authentication

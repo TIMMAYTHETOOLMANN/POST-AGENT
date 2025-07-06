@@ -8,12 +8,16 @@ page_id = "your_facebook_page_id"
 api_key = "your_facebook_api_key"
 api_secret = "your_facebook_api_secret"
 access_token = "your_facebook_access_token"
+email = "your_facebook_email@example.com"
+password = "your_facebook_password"
 
 [instagram]
 account_id = "your_instagram_account_id"
 api_key = "your_instagram_api_key"
 api_secret = "your_instagram_api_secret"
 access_token = "your_instagram_access_token"
+email = "your_instagram_email@example.com"
+password = "your_instagram_password"
 
 [youtube]
 channel_id = "your_youtube_channel_id"
@@ -21,6 +25,8 @@ api_key = "your_youtube_api_key"
 client_id = "your_youtube_client_id"
 client_secret = "your_youtube_client_secret"
 refresh_token = "your_youtube_refresh_token"
+email = "your_youtube_email@example.com"
+password = "your_youtube_password"
 
 [content]
 hashtag_count = 5
@@ -39,3 +45,12 @@ use_trending_hashtags = true
 check_interval_minutes = 5
 legacy_post_interval_minutes = 10
 max_posts_per_day = 24
+
+[browser]
+headless = true
+page_load_timeout = 30
+element_wait_timeout = 10
+max_retries = 3
+retry_delay_ms = 1000
+window_width = 1920
+window_height = 1080
