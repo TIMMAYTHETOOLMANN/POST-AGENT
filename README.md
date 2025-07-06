@@ -1,14 +1,23 @@
 # TikTok Cross-posting Application
 
-This application allows you to automatically cross-post your TikTok content to other social media platforms like Facebook, Instagram, and YouTube.
+This application allows you to automatically cross-post your TikTok content to other social media platforms like Facebook, Instagram, and YouTube using **browser automation** for maximum reliability and flexibility.
 
 ## Features
 
+- **Browser automation-based posting** for maximum reliability
 - Automatically fetch new TikTok videos
-- Cross-post to multiple platforms
-- Schedule posts
-- Customize content formatting
+- Cross-post to multiple platforms simultaneously
+- Schedule posts with intelligent retry logic
+- Customize content formatting per platform
 - Interactive configuration wizard
+- One-user operation optimized for reliability
+
+## Key Advantages
+
+- **Maximum Reliability**: Browser automation with retry logic and error recovery
+- **Maximum Flexibility**: Configurable timeouts, retry attempts, and browser settings
+- **Production Ready**: Clean code, comprehensive error handling, and logging
+- **One-User Optimized**: Designed for single-user operation with persistent sessions
 
 ## System Architecture
 
@@ -23,9 +32,11 @@ The application consists of several key components:
    - Fetches new and existing videos
    - Downloads video content
 
-3. **Platform Integrations** (`platforms.rs`)
-   - Handles posting to Facebook, Instagram, and YouTube
-   - Manages authentication with each platform
+3. **Platform Integrations** (`platforms.rs`, `browser.rs`)
+   - Browser automation for Facebook, Instagram, and YouTube posting
+   - Handles authentication via browser sessions
+   - Robust retry logic and error handling
+   - Session management and screenshot debugging
 
 4. **Content Processing** (`content.rs`)
    - Processes video content
@@ -40,6 +51,11 @@ The application consists of several key components:
 6. **Error Handling** (`error.rs`)
    - Provides custom error types
    - Ensures proper error propagation
+
+7. **Browser Automation** (`browser.rs`)
+   - Headless Chrome integration for reliable posting
+   - Configurable timeouts and retry logic
+   - Element interaction and file upload handling
 
 ## Configuration
 
@@ -82,18 +98,27 @@ access_token = "your_tiktok_access_token"  # Optional
 
 [facebook]
 page_id = "your_facebook_page_id"
+email = "your_facebook_email@example.com"
+password = "your_facebook_password"
+# API credentials (optional, for hybrid approach)
 api_key = "your_facebook_api_key"
 api_secret = "your_facebook_api_secret"
 access_token = "your_facebook_access_token"
 
 [instagram]
 account_id = "your_instagram_account_id"
+email = "your_instagram_email@example.com"
+password = "your_instagram_password"
+# API credentials (optional, for hybrid approach)
 api_key = "your_instagram_api_key"
 api_secret = "your_instagram_api_secret"
 access_token = "your_instagram_access_token"
 
 [youtube]
 channel_id = "your_youtube_channel_id"
+email = "your_youtube_email@example.com"
+password = "your_youtube_password"
+# API credentials (optional, for hybrid approach)
 api_key = "your_youtube_api_key"
 client_id = "your_youtube_client_id"
 client_secret = "your_youtube_client_secret"
@@ -113,6 +138,15 @@ use_trending_hashtags = true
 check_interval_minutes = 5
 legacy_post_interval_minutes = 10
 max_posts_per_day = 24
+
+[browser]
+headless = true
+page_load_timeout = 30
+element_wait_timeout = 10
+max_retries = 3
+retry_delay_ms = 2000
+window_width = 1920
+window_height = 1080
 ```
 
 ### Environment Variables
@@ -179,10 +213,13 @@ The launcher script provides an easy way to manage the application:
 
 ## Installation
 
-### Prerequisites
+## Prerequisites
 
 - Rust 2024 or later
 - Cargo
+- Chrome or Chromium browser (for automation)
+
+For detailed browser automation setup, see [BROWSER_AUTOMATION.md](BROWSER_AUTOMATION.md).
 
 ### Steps
 
@@ -227,7 +264,8 @@ cargo test
 - `src/config.rs` - Configuration management
 - `src/config_wizard.rs` - Interactive configuration wizard
 - `src/tiktok.rs` - TikTok API integration
-- `src/platforms.rs` - Social media platform integrations
+- `src/platforms.rs` - Social media platform integrations with browser automation
+- `src/browser.rs` - Browser automation infrastructure and utilities
 - `src/content.rs` - Content processing and formatting
 - `src/scheduler.rs` - Job scheduling and content tracking
 - `src/error.rs` - Error handling
