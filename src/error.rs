@@ -78,6 +78,14 @@ pub enum AppError {
     /// TOML serialization/deserialization error
     #[error("TOML serialization error: {0}")]
     TomlError(#[from] toml::ser::Error),
+
+    /// TOML deserialization error
+    #[error("TOML deserialization error: {0}")]
+    TomlDeError(#[from] toml::de::Error),
+
+    /// Dialoguer interaction error
+    #[error("User interaction error: {0}")]
+    DialoguerError(#[from] dialoguer::Error),
 }
 
 /// Result type alias for the application
