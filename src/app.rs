@@ -1,6 +1,6 @@
-use crate::{tiktok, platforms, content, scheduler};
 use crate::error::AppResult;
-use log::{info, error};
+use crate::{content, platforms, scheduler, tiktok};
+use log::{error, info};
 use tokio::time::Duration;
 
 /// Performs the initial synchronization of all TikTok content to all platforms
@@ -41,31 +41,39 @@ pub async fn initial_sync_all_content() -> AppResult<()> {
             Err(e) => {
                 error!("Failed to process content: {}", e);
                 continue;
-            }
+            },
         };
 
         // Post to all platforms
         match platforms::post_to_all_platforms(processed_content.clone()).await {
             Ok(_) => {
-                info!("Successfully posted video to all platforms: {}", processed_content.original_video.id);
+                info!(
+                    "Successfully posted video to all platforms: {}",
+                    processed_content.original_video.id
+                );
                 success_count += 1;
 
                 // Record that this content has been posted
-                if let Err(e) = scheduler::mark_as_posted(&processed_content.original_video.id).await {
+                if let Err(e) =
+                    scheduler::mark_as_posted(&processed_content.original_video.id).await
+                {
                     error!("Failed to mark video as posted: {}", e);
                 }
-            }
+            },
             Err(e) => {
                 error!("Failed to post video to all platforms: {}", e);
                 // Continue with next video
-            }
+            },
         }
 
         // Add a small delay between posts to avoid rate limiting
         tokio::time::sleep(Duration::from_secs(2)).await;
     }
 
-    info!("Initial sync completed. Successfully posted {} videos", success_count);
+    info!(
+        "Initial sync completed. Successfully posted {} videos",
+        success_count
+    );
     Ok(())
 }
 
@@ -102,23 +110,28 @@ pub async fn monitor_and_post_new_content() -> AppResult<()> {
             Err(e) => {
                 error!("Failed to process content: {}", e);
                 continue;
-            }
+            },
         };
 
         // Post to all platforms
         match platforms::post_to_all_platforms(processed_content.clone()).await {
             Ok(_) => {
-                info!("Successfully posted new video to all platforms: {}", processed_content.original_video.id);
+                info!(
+                    "Successfully posted new video to all platforms: {}",
+                    processed_content.original_video.id
+                );
 
                 // Record that this content has been posted
-                if let Err(e) = scheduler::mark_as_posted(&processed_content.original_video.id).await {
+                if let Err(e) =
+                    scheduler::mark_as_posted(&processed_content.original_video.id).await
+                {
                     error!("Failed to mark video as posted: {}", e);
                 }
-            }
+            },
             Err(e) => {
                 error!("Failed to post new video to all platforms: {}", e);
                 // Continue with next video
-            }
+            },
         }
     }
 
@@ -142,7 +155,10 @@ pub async fn post_legacy_content() -> AppResult<()> {
         // Download the video content if needed
         if video.local_video_path.is_none() || video.local_cover_path.is_none() {
             if let Err(e) = tiktok::download_video_content(&mut video).await {
-                error!("Failed to download content for legacy video {}: {}", video.id, e);
+                error!(
+                    "Failed to download content for legacy video {}: {}",
+                    video.id, e
+                );
                 return Err(e);
             }
             info!("Downloaded content for legacy video: {}", video.id);
@@ -154,17 +170,20 @@ pub async fn post_legacy_content() -> AppResult<()> {
         // Post to all platforms
         match platforms::post_to_all_platforms(processed_content.clone()).await {
             Ok(_) => {
-                info!("Successfully posted legacy video to all platforms: {}", processed_content.original_video.id);
+                info!(
+                    "Successfully posted legacy video to all platforms: {}",
+                    processed_content.original_video.id
+                );
 
                 // Record that this content has been posted
                 scheduler::mark_as_posted(&processed_content.original_video.id).await?;
 
                 info!("Successfully posted legacy content");
-            }
+            },
             Err(e) => {
                 error!("Failed to post legacy video to all platforms: {}", e);
                 return Err(e);
-            }
+            },
         }
     } else {
         info!("No more legacy content to post");

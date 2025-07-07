@@ -1,9 +1,9 @@
 use anyhow::Result;
 use config::{Config, File};
-use serde::{Deserialize, Serialize};
-use std::path::Path;
 use log::info;
 use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
 
 /// Configuration for the TikTok cross-posting application
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -237,9 +237,8 @@ impl Default for AppConfig {
 }
 
 /// Global configuration instance
-static CONFIG: Lazy<std::sync::Mutex<Option<AppConfig>>> = Lazy::new(|| {
-    std::sync::Mutex::new(None)
-});
+static CONFIG: Lazy<std::sync::Mutex<Option<AppConfig>>> =
+    Lazy::new(|| std::sync::Mutex::new(None));
 
 /// Load configuration from file and environment variables
 pub fn load_config() -> Result<AppConfig> {
@@ -260,7 +259,10 @@ pub fn load_config() -> Result<AppConfig> {
         config_builder = config_builder.add_source(File::with_name(&config_path));
         info!("Loaded configuration from {}", config_path);
     } else {
-        info!("No configuration file found at {}, using defaults", config_path);
+        info!(
+            "No configuration file found at {}, using defaults",
+            config_path
+        );
 
         // Create default config file
         let toml = toml::to_string_pretty(&default_config)?;
@@ -269,7 +271,8 @@ pub fn load_config() -> Result<AppConfig> {
     }
 
     // Add environment variables with prefix APP_
-    config_builder = config_builder.add_source(config::Environment::with_prefix("APP").separator("__"));
+    config_builder =
+        config_builder.add_source(config::Environment::with_prefix("APP").separator("__"));
 
     // Build config
     let config = config_builder.build()?.try_deserialize::<AppConfig>()?;
@@ -284,7 +287,9 @@ pub fn load_config() -> Result<AppConfig> {
 /// Get the global configuration
 pub fn get_config() -> AppConfig {
     let config_lock = CONFIG.lock().unwrap();
-    config_lock.clone().expect("Configuration not loaded. Call load_config() first.")
+    config_lock
+        .clone()
+        .expect("Configuration not loaded. Call load_config() first.")
 }
 
 /// Validate configuration settings
@@ -319,7 +324,10 @@ pub fn validate_config(config: &AppConfig) -> Result<()> {
     }
 
     if !errors.is_empty() {
-        return Err(anyhow::anyhow!("Configuration validation failed: {}", errors.join(", ")));
+        return Err(anyhow::anyhow!(
+            "Configuration validation failed: {}",
+            errors.join(", ")
+        ));
     }
 
     Ok(())
@@ -328,11 +336,11 @@ pub fn validate_config(config: &AppConfig) -> Result<()> {
 /// Test configuration connectivity (placeholder for actual API tests)
 pub fn test_config_connectivity(config: &AppConfig) -> Result<()> {
     info!("Testing configuration connectivity...");
-    
+
     // Here we would normally test API connectivity
     // For now, just validate that required fields are present
     validate_config(config)?;
-    
+
     info!("Configuration validation passed");
     Ok(())
 }

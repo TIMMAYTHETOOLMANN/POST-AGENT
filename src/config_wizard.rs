@@ -34,11 +34,8 @@ pub fn run_wizard() -> AppResult<AppConfig> {
         .interact()?;
 
     if has_access_token {
-        config.tiktok.access_token = Some(
-            Input::new()
-                .with_prompt("TikTok access token")
-                .interact()?
-        );
+        config.tiktok.access_token =
+            Some(Input::new().with_prompt("TikTok access token").interact()?);
     }
 
     // Facebook configuration
@@ -166,9 +163,11 @@ pub fn run_wizard() -> AppResult<AppConfig> {
                 .interact()?;
             if !continue_anyway {
                 println!("Configuration cancelled. Please run the wizard again to fix the issues.");
-                return Err(crate::error::AppError::GenericError("Configuration validation failed".to_string()));
+                return Err(crate::error::AppError::GenericError(
+                    "Configuration validation failed".to_string(),
+                ));
             }
-        }
+        },
     }
 
     // Test connectivity (optional)
@@ -209,40 +208,100 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
     let mut env_content = String::new();
 
     // TikTok
-    env_content.push_str(&format!("APP__TIKTOK__USERNAME={}\n", config.tiktok.username));
+    env_content.push_str(&format!(
+        "APP__TIKTOK__USERNAME={}\n",
+        config.tiktok.username
+    ));
     env_content.push_str(&format!("APP__TIKTOK__API_KEY={}\n", config.tiktok.api_key));
-    env_content.push_str(&format!("APP__TIKTOK__API_SECRET={}\n", config.tiktok.api_secret));
+    env_content.push_str(&format!(
+        "APP__TIKTOK__API_SECRET={}\n",
+        config.tiktok.api_secret
+    ));
     if let Some(token) = &config.tiktok.access_token {
         env_content.push_str(&format!("APP__TIKTOK__ACCESS_TOKEN={}\n", token));
     }
 
     // Facebook
-    env_content.push_str(&format!("APP__FACEBOOK__PAGE_ID={}\n", config.facebook.page_id));
-    env_content.push_str(&format!("APP__FACEBOOK__API_KEY={}\n", config.facebook.api_key));
-    env_content.push_str(&format!("APP__FACEBOOK__API_SECRET={}\n", config.facebook.api_secret));
-    env_content.push_str(&format!("APP__FACEBOOK__ACCESS_TOKEN={}\n", config.facebook.access_token));
+    env_content.push_str(&format!(
+        "APP__FACEBOOK__PAGE_ID={}\n",
+        config.facebook.page_id
+    ));
+    env_content.push_str(&format!(
+        "APP__FACEBOOK__API_KEY={}\n",
+        config.facebook.api_key
+    ));
+    env_content.push_str(&format!(
+        "APP__FACEBOOK__API_SECRET={}\n",
+        config.facebook.api_secret
+    ));
+    env_content.push_str(&format!(
+        "APP__FACEBOOK__ACCESS_TOKEN={}\n",
+        config.facebook.access_token
+    ));
 
     // Instagram
-    env_content.push_str(&format!("APP__INSTAGRAM__ACCOUNT_ID={}\n", config.instagram.account_id));
-    env_content.push_str(&format!("APP__INSTAGRAM__API_KEY={}\n", config.instagram.api_key));
-    env_content.push_str(&format!("APP__INSTAGRAM__API_SECRET={}\n", config.instagram.api_secret));
-    env_content.push_str(&format!("APP__INSTAGRAM__ACCESS_TOKEN={}\n", config.instagram.access_token));
+    env_content.push_str(&format!(
+        "APP__INSTAGRAM__ACCOUNT_ID={}\n",
+        config.instagram.account_id
+    ));
+    env_content.push_str(&format!(
+        "APP__INSTAGRAM__API_KEY={}\n",
+        config.instagram.api_key
+    ));
+    env_content.push_str(&format!(
+        "APP__INSTAGRAM__API_SECRET={}\n",
+        config.instagram.api_secret
+    ));
+    env_content.push_str(&format!(
+        "APP__INSTAGRAM__ACCESS_TOKEN={}\n",
+        config.instagram.access_token
+    ));
 
     // YouTube
-    env_content.push_str(&format!("APP__YOUTUBE__CHANNEL_ID={}\n", config.youtube.channel_id));
-    env_content.push_str(&format!("APP__YOUTUBE__API_KEY={}\n", config.youtube.api_key));
-    env_content.push_str(&format!("APP__YOUTUBE__CLIENT_ID={}\n", config.youtube.client_id));
-    env_content.push_str(&format!("APP__YOUTUBE__CLIENT_SECRET={}\n", config.youtube.client_secret));
-    env_content.push_str(&format!("APP__YOUTUBE__REFRESH_TOKEN={}\n", config.youtube.refresh_token));
+    env_content.push_str(&format!(
+        "APP__YOUTUBE__CHANNEL_ID={}\n",
+        config.youtube.channel_id
+    ));
+    env_content.push_str(&format!(
+        "APP__YOUTUBE__API_KEY={}\n",
+        config.youtube.api_key
+    ));
+    env_content.push_str(&format!(
+        "APP__YOUTUBE__CLIENT_ID={}\n",
+        config.youtube.client_id
+    ));
+    env_content.push_str(&format!(
+        "APP__YOUTUBE__CLIENT_SECRET={}\n",
+        config.youtube.client_secret
+    ));
+    env_content.push_str(&format!(
+        "APP__YOUTUBE__REFRESH_TOKEN={}\n",
+        config.youtube.refresh_token
+    ));
 
     // Content
-    env_content.push_str(&format!("APP__CONTENT__HASHTAG_COUNT={}\n", config.content.hashtag_count));
-    env_content.push_str(&format!("APP__CONTENT__USE_TRENDING_HASHTAGS={}\n", config.content.use_trending_hashtags));
+    env_content.push_str(&format!(
+        "APP__CONTENT__HASHTAG_COUNT={}\n",
+        config.content.hashtag_count
+    ));
+    env_content.push_str(&format!(
+        "APP__CONTENT__USE_TRENDING_HASHTAGS={}\n",
+        config.content.use_trending_hashtags
+    ));
 
     // Scheduler
-    env_content.push_str(&format!("APP__SCHEDULER__CHECK_INTERVAL_MINUTES={}\n", config.scheduler.check_interval_minutes));
-    env_content.push_str(&format!("APP__SCHEDULER__LEGACY_POST_INTERVAL_MINUTES={}\n", config.scheduler.legacy_post_interval_minutes));
-    env_content.push_str(&format!("APP__SCHEDULER__MAX_POSTS_PER_DAY={}\n", config.scheduler.max_posts_per_day));
+    env_content.push_str(&format!(
+        "APP__SCHEDULER__CHECK_INTERVAL_MINUTES={}\n",
+        config.scheduler.check_interval_minutes
+    ));
+    env_content.push_str(&format!(
+        "APP__SCHEDULER__LEGACY_POST_INTERVAL_MINUTES={}\n",
+        config.scheduler.legacy_post_interval_minutes
+    ));
+    env_content.push_str(&format!(
+        "APP__SCHEDULER__MAX_POSTS_PER_DAY={}\n",
+        config.scheduler.max_posts_per_day
+    ));
 
     // Write to file
     fs::write(env_path, env_content)?;

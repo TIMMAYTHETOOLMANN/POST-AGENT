@@ -1,15 +1,15 @@
 use crate::config;
 use crate::error::{AppError, AppResult};
 use crate::tiktok::TikTokVideo;
-use log::{info, debug};
-use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
+use log::{debug, info};
+use once_cell::sync::Lazy;
 use rustc_hash::FxHashMap;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
-use chrono::{DateTime, Utc};
-use tokio::sync::Mutex;
 use std::sync::Arc;
-use once_cell::sync::Lazy;
+use tokio::sync::Mutex;
 
 /// Database of posted content
 #[derive(Debug, Serialize, Deserialize)]
@@ -70,20 +70,23 @@ pub async fn mark_as_posted(video_id: &str) -> AppResult<()> {
     debug!("Marking video as posted: {}", video_id);
 
     let mut db_lock = DB.lock().await;
-    let db = db_lock.as_mut().ok_or_else(|| {
-        AppError::SchedulerError("Scheduler not initialized".to_string())
-    })?;
+    let db = db_lock
+        .as_mut()
+        .ok_or_else(|| AppError::SchedulerError("Scheduler not initialized".to_string()))?;
 
     // Update or create the post status
     let now = Utc::now();
-    let status = db.videos.entry(video_id.to_string()).or_insert_with(|| PostStatus {
-        video_id: video_id.to_string(),
-        posted_to_facebook: false,
-        posted_to_instagram: false,
-        posted_to_youtube: false,
-        first_posted_at: None,
-        last_posted_at: None,
-    });
+    let status = db
+        .videos
+        .entry(video_id.to_string())
+        .or_insert_with(|| PostStatus {
+            video_id: video_id.to_string(),
+            posted_to_facebook: false,
+            posted_to_instagram: false,
+            posted_to_youtube: false,
+            first_posted_at: None,
+            last_posted_at: None,
+        });
 
     // Update the status
     status.posted_to_facebook = true;
@@ -115,9 +118,9 @@ pub async fn get_next_legacy_video() -> AppResult<Option<TikTokVideo>> {
     // the next_legacy_video_id and then fetch the video
     loop {
         let mut db_lock = DB.lock().await;
-        let db = db_lock.as_mut().ok_or_else(|| {
-            AppError::SchedulerError("Scheduler not initialized".to_string())
-        })?;
+        let db = db_lock
+            .as_mut()
+            .ok_or_else(|| AppError::SchedulerError("Scheduler not initialized".to_string()))?;
 
         // If we have a next legacy video ID, fetch that video
         if let Some(video_id) = &db.next_legacy_video_id {
@@ -132,7 +135,8 @@ pub async fn get_next_legacy_video() -> AppResult<Option<TikTokVideo>> {
                 if id.starts_with("video_") {
                     if let Ok(num) = id.trim_start_matches("video_").parse::<i32>() {
                         let next_num = num + 1;
-                        if next_num <= 5 {  // Limit to our simulated videos
+                        if next_num <= 5 {
+                            // Limit to our simulated videos
                             db.next_legacy_video_id = Some(format!("video_{}", next_num));
                         } else {
                             db.next_legacy_video_id = None;
@@ -172,9 +176,9 @@ pub async fn get_next_legacy_video() -> AppResult<Option<TikTokVideo>> {
 /// Check if a video has been posted
 pub async fn is_video_posted(video_id: &str) -> AppResult<bool> {
     let db_lock = DB.lock().await;
-    let db = db_lock.as_ref().ok_or_else(|| {
-        AppError::SchedulerError("Scheduler not initialized".to_string())
-    })?;
+    let db = db_lock
+        .as_ref()
+        .ok_or_else(|| AppError::SchedulerError("Scheduler not initialized".to_string()))?;
 
     Ok(db.videos.contains_key(video_id))
 }
@@ -204,8 +208,9 @@ async fn load_database() -> AppResult<PostDatabase> {
 
         // Create the directory if it doesn't exist
         if let Some(parent) = Path::new(&db_path).parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| AppError::DatabaseError(format!("Failed to create database directory: {}", e)))?;
+            fs::create_dir_all(parent).map_err(|e| {
+                AppError::DatabaseError(format!("Failed to create database directory: {}", e))
+            })?;
         }
 
         // Save the new database
@@ -256,7 +261,10 @@ async fn simulate_fetch_video(video_id: &str) -> AppResult<TikTokVideo> {
 
     // Parse the video number from the ID
     let video_num = if video_id.starts_with("video_") {
-        video_id.trim_start_matches("video_").parse::<i32>().unwrap_or(1)
+        video_id
+            .trim_start_matches("video_")
+            .parse::<i32>()
+            .unwrap_or(1)
     } else {
         1
     };
