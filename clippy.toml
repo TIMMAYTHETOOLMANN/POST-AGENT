@@ -1,0 +1,17 @@
+# Clippy configuration for optimal performance and code quality
+
+# Performance optimizations
+cognitive-complexity-threshold = 30
+type-complexity-threshold = 250
+too-many-arguments-threshold = 8
+too-many-lines-threshold = 200
+
+# Enable performance-related lints
+disallowed-types = [
+    # "std::collections::HashMap",  # Use FxHashMap for better performance  
+    # "std::collections::HashSet",  # Use FxHashSet for better performance
+]
+
+# Avoid specific patterns that hurt performance
+avoid-breaking-exported-api = true
+msrv = "1.70"

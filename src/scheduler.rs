@@ -3,7 +3,7 @@ use crate::error::{AppError, AppResult};
 use crate::tiktok::TikTokVideo;
 use log::{info, debug};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use chrono::{DateTime, Utc};
@@ -15,7 +15,7 @@ use once_cell::sync::Lazy;
 #[derive(Debug, Serialize, Deserialize)]
 struct PostDatabase {
     /// Map of video IDs to posting status
-    videos: HashMap<String, PostStatus>,
+    videos: FxHashMap<String, PostStatus>,
 
     /// The ID of the next legacy video to post
     next_legacy_video_id: Option<String>,
@@ -197,7 +197,7 @@ async fn load_database() -> AppResult<PostDatabase> {
     } else {
         // Create a new database
         let db = PostDatabase {
-            videos: HashMap::new(),
+            videos: FxHashMap::default(),
             next_legacy_video_id: None,
             last_updated: Utc::now(),
         };

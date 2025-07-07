@@ -7,3 +7,5 @@ pub mod scheduler;
 pub mod error;
 pub mod config_wizard;
 pub mod browser;
+pub mod job_scheduler;
+pub mod app;
