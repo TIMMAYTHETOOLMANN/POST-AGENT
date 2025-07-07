@@ -135,9 +135,32 @@ if not exist "config.toml" (
 )
 
 call :print_status "Starting background watcher..."
-start /b cargo run --release > agent.log 2>&1
-call :print_success "Background watcher started"
+start /b cmd /c cargo run --release > agent.log 2>&1
+for /f "tokens=2" %%a in ('tasklist /fi "imagename eq cargo.exe" /fo list ^| find "PID:"') do (
+    echo %%a > agent.pid
+)
+call :print_success "Background watcher started with PID %errorlevel%"
 call :print_status "Logs are being written to agent.log"
+goto :eof
+
+REM Function to stop background watcher
+:stop_watcher
+call :print_status "Stopping background watcher..."
+
+if exist "agent.pid" (
+    set /p PID=<agent.pid
+    call :print_status "Stopping process with PID !PID!..."
+    taskkill /PID !PID! /F >nul 2>&1
+    if !errorlevel! equ 0 (
+        call :print_success "Background watcher stopped"
+        del agent.pid
+    ) else (
+        call :print_warning "Failed to stop process or process was already stopped"
+        del agent.pid
+    )
+) else (
+    call :print_warning "No background watcher PID file found"
+)
 goto :eof
 
 REM Function to show status
@@ -178,6 +201,7 @@ echo   config         - Run configuration wizard
 echo   validate       - Validate configuration
 echo   run            - Launch main agent (foreground)
 echo   start          - Start background watcher
+echo   stop           - Stop background watcher
 echo   status         - Show status
 echo   logs           - Show recent log entries
 echo   help           - Show this help message
@@ -204,6 +228,7 @@ if "%~1"=="config" goto config
 if "%~1"=="validate" goto validate
 if "%~1"=="run" goto run
 if "%~1"=="start" goto start
+if "%~1"=="stop" goto stop
 if "%~1"=="status" goto status
 if "%~1"=="logs" goto logs
 if "%~1"=="help" goto help
@@ -263,6 +288,10 @@ if %errorlevel% neq 0 exit /b 1
 call :validate_config
 if %errorlevel% neq 0 exit /b 1
 call :launch_watcher
+goto :eof
+
+:stop
+call :stop_watcher
 goto :eof
 
 :status
