@@ -1,10 +1,10 @@
-use tiktok_crosspost::{config, tiktok, platforms, scheduler, app, job_scheduler};
-use tiktok_crosspost::error::{AppError, AppResult};
-use tiktok_crosspost::config_wizard;
-use log::{info, error, warn};
-use tokio::time::Duration;
-use std::env;
 use clap::{Parser, Subcommand};
+use log::{error, info, warn};
+use std::env;
+use tiktok_crosspost::config_wizard;
+use tiktok_crosspost::error::{AppError, AppResult};
+use tiktok_crosspost::{app, config, job_scheduler, platforms, scheduler, tiktok};
+use tokio::time::Duration;
 
 /// TikTok Cross-posting Application
 #[derive(Parser)]
@@ -49,7 +49,12 @@ async fn main() -> AppResult<()> {
     let cli = Cli::parse();
 
     // Handle commands
-    if let Some(Commands::Config { output, env, env_path }) = cli.command {
+    if let Some(Commands::Config {
+        output,
+        env,
+        env_path,
+    }) = cli.command
+    {
         return handle_config_command(output, env, env_path).await;
     }
 
@@ -66,16 +71,17 @@ async fn handle_config_command(output: String, env: bool, env_path: String) -> A
     // Save configuration to the specified path
     let toml_string = toml::to_string_pretty(&config)
         .map_err(|e| AppError::ConfigError(format!("Failed to serialize configuration: {}", e)))?;
-    
+
     std::fs::write(&output, toml_string)
         .map_err(|e| AppError::GenericError(format!("Failed to save configuration: {}", e)))?;
-    
+
     info!("Configuration saved to {}", output);
 
     // Generate .env file if requested
     if env {
-        config_wizard::generate_env_file(&config, &env_path)
-            .map_err(|e| AppError::GenericError(format!("Failed to export environment variables: {}", e)))?;
+        config_wizard::generate_env_file(&config, &env_path).map_err(|e| {
+            AppError::GenericError(format!("Failed to export environment variables: {}", e))
+        })?;
         info!("Environment variables exported to {}", env_path);
     }
 
@@ -130,8 +136,9 @@ async fn initialize_components() -> AppResult<()> {
 /// Authenticate with all services
 async fn authenticate_services() -> AppResult<()> {
     // Authenticate with TikTok
-    tiktok::authenticate().await
-        .map_err(|_| AppError::AuthenticationError("Failed to authenticate with TikTok".to_string()))?;
+    tiktok::authenticate().await.map_err(|_| {
+        AppError::AuthenticationError("Failed to authenticate with TikTok".to_string())
+    })?;
     info!("Successfully authenticated with TikTok");
 
     // Authenticate with all platforms
@@ -140,7 +147,7 @@ async fn authenticate_services() -> AppResult<()> {
         Err(e) => {
             warn!("Some platform authentications failed: {}", e);
             // Continue anyway, as we might still be able to post to some platforms
-        }
+        },
     }
 
     Ok(())
@@ -153,28 +160,35 @@ async fn setup_job_scheduler(config: &config::AppConfig) -> AppResult<job_schedu
 
     // Set up continuous monitoring job (every N minutes)
     let monitor_cron = format!("0 */{} * * * *", config.scheduler.check_interval_minutes);
-    scheduler.add(&monitor_cron, || {
-        Box::pin(async {
-            if let Err(e) = app::monitor_and_post_new_content().await {
-                error!("Error checking for new TikTok content: {}", e);
-            } else {
-                info!("Successfully checked for new TikTok content");
-            }
+    scheduler
+        .add(&monitor_cron, || {
+            Box::pin(async {
+                if let Err(e) = app::monitor_and_post_new_content().await {
+                    error!("Error checking for new TikTok content: {}", e);
+                } else {
+                    info!("Successfully checked for new TikTok content");
+                }
+            })
         })
-    }).await?;
+        .await?;
     info!("Added monitoring job with schedule: {}", monitor_cron);
 
     // Set up job for posting legacy content (every N minutes)
-    let legacy_cron = format!("0 */{} * * * *", config.scheduler.legacy_post_interval_minutes);
-    scheduler.add(&legacy_cron, || {
-        Box::pin(async {
-            if let Err(e) = app::post_legacy_content().await {
-                error!("Error posting legacy TikTok content: {}", e);
-            } else {
-                info!("Successfully posted legacy TikTok content");
-            }
+    let legacy_cron = format!(
+        "0 */{} * * * *",
+        config.scheduler.legacy_post_interval_minutes
+    );
+    scheduler
+        .add(&legacy_cron, || {
+            Box::pin(async {
+                if let Err(e) = app::post_legacy_content().await {
+                    error!("Error posting legacy TikTok content: {}", e);
+                } else {
+                    info!("Successfully posted legacy TikTok content");
+                }
+            })
         })
-    }).await?;
+        .await?;
     info!("Added legacy content job with schedule: {}", legacy_cron);
 
     Ok(scheduler)
@@ -188,7 +202,7 @@ async fn run_initial_sync() -> AppResult<()> {
         Err(e) => {
             error!("Error during initial content sync: {}", e);
             // Continue anyway, as we can still post legacy content and monitor for new content
-        }
+        },
     }
     Ok(())
 }

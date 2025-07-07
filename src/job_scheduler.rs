@@ -1,9 +1,9 @@
 use crate::error::{AppError, AppResult};
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 use tokio::time::{interval, Duration};
-use std::pin::Pin;
 
 /// A simple job scheduler using Tokio's interval functionality
 pub struct JobScheduler {
@@ -13,9 +13,7 @@ pub struct JobScheduler {
 impl JobScheduler {
     /// Create a new JobScheduler
     pub async fn new() -> AppResult<Self> {
-        Ok(Self {
-            jobs: Vec::new(),
-        })
+        Ok(Self { jobs: Vec::new() })
     }
 
     /// Add a new job to the scheduler
@@ -55,15 +53,23 @@ fn parse_cron_minutes(cron: &str) -> AppResult<u64> {
     // This only handles the minute field with */n format
     let parts: Vec<&str> = cron.split_whitespace().collect();
     if parts.len() != 6 {
-        return Err(AppError::SchedulerError("Invalid cron expression format".to_string()));
+        return Err(AppError::SchedulerError(
+            "Invalid cron expression format".to_string(),
+        ));
     }
 
     let minute_part = parts[1];
     if minute_part.starts_with("*/") {
-        let interval = minute_part.trim_start_matches("*/").parse::<u64>()
-            .map_err(|_| AppError::SchedulerError("Invalid minute interval in cron expression".to_string()))?;
+        let interval = minute_part
+            .trim_start_matches("*/")
+            .parse::<u64>()
+            .map_err(|_| {
+                AppError::SchedulerError("Invalid minute interval in cron expression".to_string())
+            })?;
         Ok(interval)
     } else {
-        Err(AppError::SchedulerError("Unsupported cron expression format".to_string()))
+        Err(AppError::SchedulerError(
+            "Unsupported cron expression format".to_string(),
+        ))
     }
 }

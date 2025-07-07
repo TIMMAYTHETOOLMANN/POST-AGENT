@@ -15,33 +15,33 @@ async fn test_browser_manager_creation() {
         std::env::set_var("APP__BROWSER__WINDOW_WIDTH", "1920");
         std::env::set_var("APP__BROWSER__WINDOW_HEIGHT", "1080");
     }
-    
+
     // Load config first
     let _ = config::load_config();
-    
+
     // Test browser manager creation
     let result = BrowserManager::new();
-    
+
     match result {
         Ok(browser_manager) => {
             println!("✓ Browser manager created successfully");
-            
+
             // Test creating a new tab
             let tab_result = browser_manager.new_tab();
             match tab_result {
                 Ok(_) => {
                     println!("✓ Browser tab created successfully");
-                }
+                },
                 Err(e) => {
                     println!("✗ Failed to create browser tab: {}", e);
-                }
+                },
             }
-        }
+        },
         Err(e) => {
             println!("✗ Failed to create browser manager: {}", e);
             // This might fail in environments without Chrome installed
             // but that's expected in CI environments
-        }
+        },
     }
 }
 
@@ -50,7 +50,7 @@ async fn test_platform_authentication_functions_exist() {
     // Test that our authentication functions are properly compiled
     // We can't test actual authentication without credentials
     println!("✓ Platform authentication functions compiled successfully");
-    
+
     // Verify function signatures exist by checking they can be referenced
     let _auth_all = platforms::authenticate_all_platforms;
     println!("✓ authenticate_all_platforms function exists");

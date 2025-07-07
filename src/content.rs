@@ -1,12 +1,12 @@
 use crate::config;
 use crate::error::{AppError, AppResult};
 use crate::tiktok::TikTokVideo;
-use log::{info, debug};
+use chrono::Utc;
+use log::{debug, info};
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
-use serde::{Deserialize, Serialize};
 use rustc_hash::FxHashSet;
-use chrono::Utc;
+use serde::{Deserialize, Serialize};
 
 /// Represents processed content ready for posting to other platforms
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,7 +46,8 @@ pub async fn process_content(video: TikTokVideo) -> AppResult<ProcessedContent> 
         &config.content.custom_hashtags,
         config.content.hashtag_count,
         config.content.use_trending_hashtags,
-    ).await?;
+    )
+    .await?;
     debug!("Generated hashtags: {:?}", trending_hashtags);
 
     // Combine original description, tagline, and hashtags
@@ -56,7 +57,8 @@ pub async fn process_content(video: TikTokVideo) -> AppResult<ProcessedContent> 
         .collect::<Vec<String>>()
         .join(" ");
 
-    let enhanced_description = format!("{}\n\n{}\n\n{}", tagline, video.description, hashtag_string);
+    let enhanced_description =
+        format!("{}\n\n{}\n\n{}", tagline, video.description, hashtag_string);
     debug!("Enhanced description: {}", enhanced_description);
 
     // Define target platforms
@@ -76,7 +78,10 @@ pub async fn process_content(video: TikTokVideo) -> AppResult<ProcessedContent> 
         target_platforms,
     };
 
-    info!("Successfully processed TikTok video: {}", processed_content.original_video.id);
+    info!(
+        "Successfully processed TikTok video: {}",
+        processed_content.original_video.id
+    );
 
     Ok(processed_content)
 }

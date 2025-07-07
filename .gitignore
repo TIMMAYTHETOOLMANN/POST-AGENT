@@ -29,9 +29,7 @@ downloads/
 .idea/dictionaries
 .idea/shelf/
 .idea/*.iws
-.idea/modules.xml
-.idea/*.iml
-.idea/*.ipr
+# Note: modules.xml, vcs.xml, rust.xml are kept for better IDE integration
 
 # OS
 .DS_Store
