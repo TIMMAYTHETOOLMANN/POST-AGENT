@@ -1,81 +1,10 @@
-use tiktok_crosspost::config;
-use tiktok_crosspost::tiktok;
-use tiktok_crosspost::platforms;
-use tiktok_crosspost::content;
-use tiktok_crosspost::scheduler;
+use tiktok_crosspost::{config, tiktok, platforms, scheduler, app, job_scheduler};
 use tiktok_crosspost::error::{AppError, AppResult};
 use tiktok_crosspost::config_wizard;
 use log::{info, error, warn};
-use tokio::time::{interval, Duration};
+use tokio::time::Duration;
 use std::env;
 use clap::{Parser, Subcommand};
-use std::sync::Arc;
-use std::pin::Pin;
-use tokio::sync::Mutex;
-use tokio::task::JoinHandle;
-
-/// A simple job scheduler using Tokio's interval functionality
-struct JobScheduler {
-    jobs: Vec<JoinHandle<()>>,
-}
-
-impl JobScheduler {
-    /// Create a new JobScheduler
-    async fn new() -> AppResult<Self> {
-        Ok(Self {
-            jobs: Vec::new(),
-        })
-    }
-
-    /// Add a new job to the scheduler
-    async fn add<F>(&mut self, cron_expression: &str, job: F) -> AppResult<()>
-    where
-        F: Fn() -> Pin<Box<dyn std::future::Future<Output = ()> + Send>> + Send + Sync + 'static,
-    {
-        // Parse the cron expression to get the interval in minutes
-        let minutes = parse_cron_minutes(cron_expression)?;
-        let duration = Duration::from_secs(minutes * 60);
-
-        // Create a new task that runs the job at the specified interval
-        let job = Arc::new(Mutex::new(job));
-        let handle = tokio::spawn(async move {
-            let mut interval = interval(duration);
-            loop {
-                interval.tick().await;
-                let job_guard = job.lock().await;
-                (job_guard)().await;
-            }
-        });
-
-        self.jobs.push(handle);
-        Ok(())
-    }
-
-    /// Start the scheduler
-    async fn start(self) -> AppResult<()> {
-        // The jobs are already running, so we just need to return
-        Ok(())
-    }
-}
-
-/// Parse a cron expression to get the interval in minutes
-fn parse_cron_minutes(cron: &str) -> AppResult<u64> {
-    // Simple parser for cron expressions like "0 */5 * * * *"
-    // This only handles the minute field with */n format
-    let parts: Vec<&str> = cron.split_whitespace().collect();
-    if parts.len() != 6 {
-        return Err(AppError::SchedulerError("Invalid cron expression format".to_string()));
-    }
-
-    let minute_part = parts[1];
-    if minute_part.starts_with("*/") {
-        let interval = minute_part.trim_start_matches("*/").parse::<u64>()
-            .map_err(|_| AppError::SchedulerError("Invalid minute interval in cron expression".to_string()))?;
-        Ok(interval)
-    } else {
-        Err(AppError::SchedulerError("Unsupported cron expression format".to_string()))
-    }
-}
 
 /// TikTok Cross-posting Application
 #[derive(Parser)]
@@ -121,77 +50,89 @@ async fn main() -> AppResult<()> {
 
     // Handle commands
     if let Some(Commands::Config { output, env, env_path }) = cli.command {
-        info!("Starting configuration wizard");
-
-        match config_wizard::run_wizard() {
-            Ok(config) => {
-                // Save configuration to the specified path
-                match toml::to_string_pretty(&config) {
-                    Ok(toml_string) => {
-                        match std::fs::write(&output, toml_string) {
-                            Ok(_) => info!("Configuration saved to {}", output),
-                            Err(e) => {
-                                error!("Failed to save configuration: {}", e);
-                                return Err(AppError::GenericError(format!("Failed to save configuration: {}", e)));
-                            }
-                        }
-                    },
-                    Err(e) => {
-                        error!("Failed to serialize configuration: {}", e);
-                        return Err(AppError::ConfigError(format!("Failed to serialize configuration: {}", e)));
-                    }
-                }
-
-                // Generate .env file if requested
-                if env {
-                    match config_wizard::generate_env_file(&config, &env_path) {
-                        Ok(_) => info!("Environment variables exported to {}", env_path),
-                        Err(e) => {
-                            error!("Failed to export environment variables: {}", e);
-                            return Err(AppError::GenericError(format!("Failed to export environment variables: {}", e)));
-                        }
-                    }
-                }
-
-                info!("Configuration completed successfully!");
-                return Ok(());
-            },
-            Err(e) => {
-                error!("Error during configuration: {}", e);
-                return Err(AppError::ConfigError(format!("Error during configuration: {}", e)));
-            }
-        }
+        return handle_config_command(output, env, env_path).await;
     }
 
+    // Main application flow
+    run_main_application().await
+}
+
+/// Handle the configuration wizard command
+async fn handle_config_command(output: String, env: bool, env_path: String) -> AppResult<()> {
+    info!("Starting configuration wizard");
+
+    let config = config_wizard::run_wizard()?;
+
+    // Save configuration to the specified path
+    let toml_string = toml::to_string_pretty(&config)
+        .map_err(|e| AppError::ConfigError(format!("Failed to serialize configuration: {}", e)))?;
+    
+    std::fs::write(&output, toml_string)
+        .map_err(|e| AppError::GenericError(format!("Failed to save configuration: {}", e)))?;
+    
+    info!("Configuration saved to {}", output);
+
+    // Generate .env file if requested
+    if env {
+        config_wizard::generate_env_file(&config, &env_path)
+            .map_err(|e| AppError::GenericError(format!("Failed to export environment variables: {}", e)))?;
+        info!("Environment variables exported to {}", env_path);
+    }
+
+    info!("Configuration completed successfully!");
+    Ok(())
+}
+
+/// Run the main application
+async fn run_main_application() -> AppResult<()> {
     info!("Starting TikTok Cross-posting Application");
 
-    // Load configuration
+    // Load and validate configuration
+    let config = initialize_configuration().await?;
+
+    // Initialize components
+    initialize_components().await?;
+
+    // Authenticate with services
+    authenticate_services().await?;
+
+    // Set up and start job scheduler
+    let scheduler = setup_job_scheduler(&config).await?;
+    scheduler.start().await?;
+    info!("Job scheduler started");
+
+    // Run initial sync
+    run_initial_sync().await?;
+
+    // Keep the application running
+    run_main_loop().await
+}
+
+/// Initialize and validate configuration
+async fn initialize_configuration() -> AppResult<config::AppConfig> {
     let config = config::load_config()?;
     info!("Configuration loaded successfully");
 
-    // Validate configuration
-    match config::validate_config(&config) {
-        Ok(_) => info!("Configuration validation passed"),
-        Err(e) => {
-            error!("Configuration validation failed: {}", e);
-            return Err(AppError::ConfigError(format!("Configuration validation failed: {}", e)));
-        }
-    }
+    config::validate_config(&config)
+        .map_err(|e| AppError::ConfigError(format!("Configuration validation failed: {}", e)))?;
+    info!("Configuration validation passed");
 
-    // Initialize the scheduler database
+    Ok(config)
+}
+
+/// Initialize application components
+async fn initialize_components() -> AppResult<()> {
     scheduler::init().await?;
     info!("Scheduler database initialized");
+    Ok(())
+}
 
+/// Authenticate with all services
+async fn authenticate_services() -> AppResult<()> {
     // Authenticate with TikTok
-    match tiktok::authenticate().await {
-        Ok(_) => info!("Successfully authenticated with TikTok"),
-        Err(e) => {
-            error!("Failed to authenticate with TikTok: {}", e);
-            return Err(AppError::AuthenticationError(
-                "Failed to authenticate with TikTok".to_string(),
-            ));
-        }
-    }
+    tiktok::authenticate().await
+        .map_err(|_| AppError::AuthenticationError("Failed to authenticate with TikTok".to_string()))?;
+    info!("Successfully authenticated with TikTok");
 
     // Authenticate with all platforms
     match platforms::authenticate_all_platforms().await {
@@ -202,229 +143,63 @@ async fn main() -> AppResult<()> {
         }
     }
 
-    // Initialize the job scheduler
-    let mut scheduler = JobScheduler::new().await?;
+    Ok(())
+}
+
+/// Set up the job scheduler with configured intervals
+async fn setup_job_scheduler(config: &config::AppConfig) -> AppResult<job_scheduler::JobScheduler> {
+    let mut scheduler = job_scheduler::JobScheduler::new().await?;
     info!("Job scheduler initialized");
 
-    // Set up continuous monitoring job (every 5 minutes)
+    // Set up continuous monitoring job (every N minutes)
     let monitor_cron = format!("0 */{} * * * *", config.scheduler.check_interval_minutes);
     scheduler.add(&monitor_cron, || {
         Box::pin(async {
-            match monitor_and_post_new_content().await {
-                Ok(_) => info!("Successfully checked for new TikTok content"),
-                Err(e) => error!("Error checking for new TikTok content: {}", e),
+            if let Err(e) = app::monitor_and_post_new_content().await {
+                error!("Error checking for new TikTok content: {}", e);
+            } else {
+                info!("Successfully checked for new TikTok content");
             }
         })
     }).await?;
     info!("Added monitoring job with schedule: {}", monitor_cron);
 
-    // Set up job for posting legacy content (every 10 minutes)
+    // Set up job for posting legacy content (every N minutes)
     let legacy_cron = format!("0 */{} * * * *", config.scheduler.legacy_post_interval_minutes);
     scheduler.add(&legacy_cron, || {
         Box::pin(async {
-            match post_legacy_content().await {
-                Ok(_) => info!("Successfully posted legacy TikTok content"),
-                Err(e) => error!("Error posting legacy TikTok content: {}", e),
+            if let Err(e) = app::post_legacy_content().await {
+                error!("Error posting legacy TikTok content: {}", e);
+            } else {
+                info!("Successfully posted legacy TikTok content");
             }
         })
     }).await?;
     info!("Added legacy content job with schedule: {}", legacy_cron);
 
-    // Start the scheduler
-    scheduler.start().await?;
-    info!("Job scheduler started");
+    Ok(scheduler)
+}
 
-    // Initial sync of all content
+/// Run initial content synchronization
+async fn run_initial_sync() -> AppResult<()> {
     info!("Starting initial content synchronization");
-    match initial_sync_all_content().await {
+    match app::initial_sync_all_content().await {
         Ok(_) => info!("Initial content sync completed successfully"),
         Err(e) => {
             error!("Error during initial content sync: {}", e);
             // Continue anyway, as we can still post legacy content and monitor for new content
         }
     }
+    Ok(())
+}
 
+/// Main application loop
+async fn run_main_loop() -> AppResult<()> {
     info!("TikTok Cross-posting Application is now running");
     info!("Press Ctrl+C to stop the application");
 
-    // Keep the application running
+    // Keep the application running efficiently
     loop {
         tokio::time::sleep(Duration::from_secs(60)).await;
     }
-}
-
-/// Performs the initial synchronization of all TikTok content to all platforms
-async fn initial_sync_all_content() -> AppResult<()> {
-    info!("Starting initial sync of all TikTok content");
-
-    // Fetch all TikTok videos
-    let mut videos = tiktok::fetch_all_videos().await?;
-    info!("Fetched {} TikTok videos", videos.len());
-
-    if videos.is_empty() {
-        info!("No TikTok videos found to sync");
-        return Ok(());
-    }
-
-    // Sort videos by creation date (oldest first)
-    videos.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-
-    // Process and post each video to all platforms
-    let mut success_count = 0;
-    for mut video in videos {
-        // Check if this video has already been posted
-        if scheduler::is_video_posted(&video.id).await? {
-            info!("Skipping already posted video: {}", video.id);
-            continue;
-        }
-
-        // Download the video content
-        match tiktok::download_video_content(&mut video).await {
-            Ok(_) => info!("Downloaded content for video: {}", video.id),
-            Err(e) => {
-                error!("Failed to download content for video {}: {}", video.id, e);
-                continue;
-            }
-        }
-
-        // Process content (add hashtags and taglines)
-        let processed_content = match content::process_content(video).await {
-            Ok(content) => content,
-            Err(e) => {
-                error!("Failed to process content: {}", e);
-                continue;
-            }
-        };
-
-        // Post to all platforms
-        match platforms::post_to_all_platforms(processed_content.clone()).await {
-            Ok(_) => {
-                info!("Successfully posted video to all platforms: {}", processed_content.original_video.id);
-                success_count += 1;
-
-                // Record that this content has been posted
-                if let Err(e) = scheduler::mark_as_posted(&processed_content.original_video.id).await {
-                    error!("Failed to mark video as posted: {}", e);
-                }
-            }
-            Err(e) => {
-                error!("Failed to post video to all platforms: {}", e);
-                // Continue with next video
-            }
-        }
-
-        // Add a small delay between posts to avoid rate limiting
-        tokio::time::sleep(Duration::from_secs(2)).await;
-    }
-
-    info!("Initial sync completed. Successfully posted {} videos", success_count);
-    Ok(())
-}
-
-/// Monitors TikTok for new content and posts it to all platforms
-async fn monitor_and_post_new_content() -> AppResult<()> {
-    info!("Checking for new TikTok content");
-
-    // Fetch new TikTok videos
-    let new_videos = tiktok::fetch_new_videos().await?;
-    info!("Found {} new TikTok videos", new_videos.len());
-
-    if new_videos.is_empty() {
-        return Ok(());
-    }
-
-    // Process and post each new video to all platforms
-    for mut video in new_videos {
-        // Check if this video has already been posted
-        if scheduler::is_video_posted(&video.id).await? {
-            info!("Skipping already posted video: {}", video.id);
-            continue;
-        }
-
-        // Download the video content
-        match tiktok::download_video_content(&mut video).await {
-            Ok(_) => info!("Downloaded content for video: {}", video.id),
-            Err(e) => {
-                error!("Failed to download content for video {}: {}", video.id, e);
-                continue;
-            }
-        }
-
-        // Process content (add hashtags and taglines)
-        let processed_content = match content::process_content(video).await {
-            Ok(content) => content,
-            Err(e) => {
-                error!("Failed to process content: {}", e);
-                continue;
-            }
-        };
-
-        // Post to all platforms
-        match platforms::post_to_all_platforms(processed_content.clone()).await {
-            Ok(_) => {
-                info!("Successfully posted new video to all platforms: {}", processed_content.original_video.id);
-
-                // Record that this content has been posted
-                if let Err(e) = scheduler::mark_as_posted(&processed_content.original_video.id).await {
-                    error!("Failed to mark video as posted: {}", e);
-                }
-            }
-            Err(e) => {
-                error!("Failed to post new video to all platforms: {}", e);
-                // Continue with next video
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Posts legacy TikTok content according to the schedule
-async fn post_legacy_content() -> AppResult<()> {
-    info!("Posting next legacy TikTok content");
-
-    // Get the next legacy video to post
-    if let Some(mut video) = scheduler::get_next_legacy_video().await? {
-        info!("Found legacy video to post: {}", video.id);
-
-        // Check if this video has already been posted
-        if scheduler::is_video_posted(&video.id).await? {
-            info!("Skipping already posted legacy video: {}", video.id);
-            return Ok(());
-        }
-
-        // Download the video content if needed
-        if video.local_video_path.is_none() || video.local_cover_path.is_none() {
-            match tiktok::download_video_content(&mut video).await {
-                Ok(_) => info!("Downloaded content for legacy video: {}", video.id),
-                Err(e) => {
-                    error!("Failed to download content for legacy video {}: {}", video.id, e);
-                    return Err(e);
-                }
-            }
-        }
-
-        // Process content (add hashtags and taglines)
-        let processed_content = content::process_content(video).await?;
-
-        // Post to all platforms
-        match platforms::post_to_all_platforms(processed_content.clone()).await {
-            Ok(_) => {
-                info!("Successfully posted legacy video to all platforms: {}", processed_content.original_video.id);
-
-                // Record that this content has been posted
-                scheduler::mark_as_posted(&processed_content.original_video.id).await?;
-
-                info!("Successfully posted legacy content");
-            }
-            Err(e) => {
-                error!("Failed to post legacy video to all platforms: {}", e);
-                return Err(e);
-            }
-        }
-    } else {
-        info!("No more legacy content to post");
-    }
-
-    Ok(())
 }

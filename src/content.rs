@@ -5,7 +5,7 @@ use log::{info, debug};
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use chrono::Utc;
 
 /// Represents processed content ready for posting to other platforms
@@ -112,7 +112,7 @@ async fn generate_trending_hashtags(
 ) -> AppResult<Vec<String>> {
     // Use StdRng which is Send + Sync
     let mut rng = rand::rngs::StdRng::from_entropy();
-    let mut hashtags = HashSet::new();
+    let mut hashtags = FxHashSet::default();
 
     // Add original hashtags
     for tag in original_hashtags {

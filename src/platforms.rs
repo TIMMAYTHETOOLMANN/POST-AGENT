@@ -290,7 +290,7 @@ async fn browser_youtube_post(
     browser_manager.navigate_with_retry(&tab, "https://studio.youtube.com").await?;
     
     // Check if we need to login
-    if let Ok(_) = tab.find_element("input[type='email']") {
+    if tab.find_element("input[type='email']").is_ok() {
         // Login to Google/YouTube
         browser_manager.type_text_with_retry(&tab, "input[type='email']", email).await?;
         browser_manager.click_with_retry(&tab, "#identifierNext").await?;
@@ -467,7 +467,7 @@ async fn authenticate_youtube() -> AppResult<()> {
     browser_manager.navigate_with_retry(&tab, "https://studio.youtube.com").await?;
     
     // Check if we need to login
-    if let Ok(_) = tab.find_element("input[type='email']") {
+    if tab.find_element("input[type='email']").is_ok() {
         // Login to Google/YouTube
         browser_manager.type_text_with_retry(&tab, "input[type='email']", &youtube_config.email).await?;
         browser_manager.click_with_retry(&tab, "#identifierNext").await?;
