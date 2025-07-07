@@ -1,7 +1,7 @@
 use crate::config;
 use crate::error::{AppError, AppResult};
 use crate::tiktok::TikTokVideo;
-use log::{info, debug, warn};
+use log::{info, debug};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
@@ -240,7 +240,7 @@ async fn save_database(db: &PostDatabase) -> AppResult<()> {
 
 /// Get the path to the database file
 fn get_database_path() -> AppResult<PathBuf> {
-    let config = config::get_config();
+    let _config = config::get_config();
 
     // In a real implementation, this might be configurable
     // For now, we'll just use a fixed path
