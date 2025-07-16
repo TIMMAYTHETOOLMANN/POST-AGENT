@@ -8,6 +8,14 @@
       "first_posted_at": "2025-07-16T03:18:40.556394052Z",
       "last_posted_at": "2025-07-16T03:18:40.556394052Z"
     },
+    "video_2": {
+      "video_id": "video_2",
+      "posted_to_facebook": true,
+      "posted_to_instagram": true,
+      "posted_to_youtube": true,
+      "first_posted_at": "2025-07-16T03:20:12.575487119Z",
+      "last_posted_at": "2025-07-16T03:20:13.076772591Z"
+    },
     "video_3": {
       "video_id": "video_3",
       "posted_to_facebook": true,
@@ -33,6 +41,6 @@
       "last_posted_at": "2025-07-16T03:18:49.563601962Z"
     }
   },
-  "next_legacy_video_id": "video_2",
-  "last_updated": "2025-07-16T03:18:58.570586201Z"
+  "next_legacy_video_id": "video_4",
+  "last_updated": "2025-07-16T03:20:13.076772591Z"
 }
