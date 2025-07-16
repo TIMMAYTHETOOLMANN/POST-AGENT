@@ -3,7 +3,6 @@ use crate::content::ProcessedContent;
 use crate::error::{AppError, AppResult};
 use log::{error, info, warn};
 use std::path::Path;
-use std::time::Duration;
 
 /// Post content to all configured platforms
 pub async fn post_to_all_platforms(content: ProcessedContent) -> AppResult<()> {
@@ -180,85 +179,109 @@ async fn post_to_youtube(content: &ProcessedContent) -> AppResult<()> {
 /// Post to Facebook using browser automation
 async fn browser_facebook_post(
     email: &str,
-    _password: &str,
+    password: &str,
     description: &str,
     video_path: &Path,
 ) -> AppResult<()> {
     info!("Starting Facebook post via browser automation");
 
-    // For simulation, just log the action instead of actual browser automation
-    if email.contains("example.com") || email.contains("your_") {
-        info!("Simulation mode: Would post to Facebook with description: {}", description);
-        info!("Simulation mode: Would upload video file: {:?}", video_path);
-        
-        // Simulate processing time
-        tokio::time::sleep(Duration::from_secs(2)).await;
-        
-        info!("Facebook post simulation completed successfully");
-        return Ok(());
-    }
-
-    // Real browser automation code would go here
-    // For now, return an error to indicate this needs real implementation
-    Err(AppError::MediaUploadError(
-        "Real browser automation not implemented yet".to_string(),
-    ))
+    // Use real browser automation for Facebook posting
+    use crate::browser::FacebookBrowser;
+    
+    let mut browser = FacebookBrowser::new().await?;
+    
+    // Login to Facebook
+    browser.login(email, password).await?;
+    
+    // Navigate to video upload page
+    browser.navigate_to_video_upload().await?;
+    
+    // Upload video file
+    browser.upload_video(video_path).await?;
+    
+    // Add description with dynamic hashtags
+    browser.add_description(description).await?;
+    
+    // Set privacy and posting options
+    browser.set_posting_options().await?;
+    
+    // Submit the post
+    browser.submit_post().await?;
+    
+    info!("Facebook post completed successfully");
+    Ok(())
 }
 
 /// Post to Instagram using browser automation
 async fn browser_instagram_post(
     email: &str,
-    _password: &str,
+    password: &str,
     description: &str,
     video_path: &Path,
 ) -> AppResult<()> {
     info!("Starting Instagram post via browser automation");
 
-    // For simulation, just log the action instead of actual browser automation
-    if email.contains("example.com") || email.contains("your_") {
-        info!("Simulation mode: Would post to Instagram with description: {}", description);
-        info!("Simulation mode: Would upload video file: {:?}", video_path);
-        
-        // Simulate processing time
-        tokio::time::sleep(Duration::from_secs(2)).await;
-        
-        info!("Instagram post simulation completed successfully");
-        return Ok(());
-    }
-
-    // Real browser automation code would go here
-    // For now, return an error to indicate this needs real implementation
-    Err(AppError::MediaUploadError(
-        "Real browser automation not implemented yet".to_string(),
-    ))
+    // Use real browser automation for Instagram posting
+    use crate::browser::InstagramBrowser;
+    
+    let mut browser = InstagramBrowser::new().await?;
+    
+    // Login to Instagram
+    browser.login(email, password).await?;
+    
+    // Navigate to video upload page
+    browser.navigate_to_create_post().await?;
+    
+    // Upload video file
+    browser.upload_video(video_path).await?;
+    
+    // Add description with dynamic hashtags
+    browser.add_description(description).await?;
+    
+    // Set posting options
+    browser.set_posting_options().await?;
+    
+    // Submit the post
+    browser.submit_post().await?;
+    
+    info!("Instagram post completed successfully");
+    Ok(())
 }
 
 /// Post to YouTube using browser automation
 async fn browser_youtube_post(
     email: &str,
-    _password: &str,
+    password: &str,
     description: &str,
     video_path: &Path,
 ) -> AppResult<()> {
     info!("Starting YouTube post via browser automation");
 
-    // For simulation, just log the action instead of actual browser automation
-    if email.contains("example.com") || email.contains("your_") {
-        info!("Simulation mode: Would post to YouTube with description: {}", description);
-        info!("Simulation mode: Would upload video file: {:?}", video_path);
-        
-        // Simulate processing time
-        tokio::time::sleep(Duration::from_secs(3)).await;
-        
-        info!("YouTube post simulation completed successfully");
-        return Ok(());
-    }
-
-    // Real browser automation code would go here
-    // For now, return an error to indicate this needs real implementation
-    Err(AppError::MediaUploadError(
-        "Real browser automation not implemented yet".to_string(),
-    ))
+    // Use real browser automation for YouTube posting
+    use crate::browser::YouTubeBrowser;
+    
+    let mut browser = YouTubeBrowser::new().await?;
+    
+    // Login to YouTube
+    browser.login(email, password).await?;
+    
+    // Navigate to video upload page
+    browser.navigate_to_upload().await?;
+    
+    // Upload video file
+    browser.upload_video(video_path).await?;
+    
+    // Add title and description with dynamic hashtags
+    browser.add_title_and_description(description).await?;
+    
+    // Set video options (visibility, category, etc.)
+    browser.set_video_options().await?;
+    
+    // Submit the video
+    browser.submit_video().await?;
+    
+    info!("YouTube post completed successfully");
+    Ok(())
 }
 
 /// Authenticate with all social media platforms
@@ -290,60 +313,66 @@ pub async fn authenticate_all_platforms() -> AppResult<()> {
 
 /// Authenticate with Facebook
 async fn authenticate_facebook() -> AppResult<()> {
-    info!("Testing Facebook authentication via browser automation");
+    info!("Authenticating with Facebook via browser automation");
 
     let config = config::get_config();
     let facebook_config = &config.facebook;
 
-    // For simulation, just log the action instead of actual browser automation
-    if facebook_config.email.contains("example.com") || facebook_config.email.contains("your_") {
-        info!("Simulation mode: Would authenticate with Facebook using email: {}", facebook_config.email);
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        info!("Facebook authentication simulation completed successfully");
-        return Ok(());
-    }
-
-    // Real browser automation code would go here
-    warn!("Real Facebook authentication not implemented yet");
+    // Use real browser automation for Facebook authentication
+    use crate::browser::FacebookBrowser;
+    
+    let mut browser = FacebookBrowser::new().await?;
+    
+    // Test login
+    browser.login(&facebook_config.email, &facebook_config.password).await?;
+    
+    // Verify authentication was successful
+    browser.verify_authentication().await?;
+    
+    info!("Facebook authentication completed successfully");
     Ok(())
 }
 
 /// Authenticate with Instagram
 async fn authenticate_instagram() -> AppResult<()> {
-    info!("Testing Instagram authentication via browser automation");
+    info!("Authenticating with Instagram via browser automation");
 
     let config = config::get_config();
     let instagram_config = &config.instagram;
 
-    // For simulation, just log the action instead of actual browser automation
-    if instagram_config.email.contains("example.com") || instagram_config.email.contains("your_") {
-        info!("Simulation mode: Would authenticate with Instagram using email: {}", instagram_config.email);
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        info!("Instagram authentication simulation completed successfully");
-        return Ok(());
-    }
-
-    // Real browser automation code would go here
-    warn!("Real Instagram authentication not implemented yet");
+    // Use real browser automation for Instagram authentication
+    use crate::browser::InstagramBrowser;
+    
+    let mut browser = InstagramBrowser::new().await?;
+    
+    // Test login
+    browser.login(&instagram_config.email, &instagram_config.password).await?;
+    
+    // Verify authentication was successful
+    browser.verify_authentication().await?;
+    
+    info!("Instagram authentication completed successfully");
     Ok(())
 }
 
 /// Authenticate with YouTube
 async fn authenticate_youtube() -> AppResult<()> {
-    info!("Testing YouTube authentication via browser automation");
+    info!("Authenticating with YouTube via browser automation");
 
     let config = config::get_config();
     let youtube_config = &config.youtube;
 
-    // For simulation, just log the action instead of actual browser automation
-    if youtube_config.email.contains("example.com") || youtube_config.email.contains("your_") {
-        info!("Simulation mode: Would authenticate with YouTube using email: {}", youtube_config.email);
-        tokio::time::sleep(Duration::from_secs(1)).await;
-        info!("YouTube authentication simulation completed successfully");
-        return Ok(());
-    }
-
-    // Real browser automation code would go here
-    warn!("Real YouTube authentication not implemented yet");
+    // Use real browser automation for YouTube authentication
+    use crate::browser::YouTubeBrowser;
+    
+    let mut browser = YouTubeBrowser::new().await?;
+    
+    // Test login
+    browser.login(&youtube_config.email, &youtube_config.password).await?;
+    
+    // Verify authentication was successful
+    browser.verify_authentication().await?;
+    
+    info!("YouTube authentication completed successfully");
     Ok(())
 }

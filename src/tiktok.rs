@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::time::Duration;
 use tokio::fs;
-use tokio::time::sleep;
 
 /// Represents a TikTok video with all its metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,12 +63,46 @@ pub async fn fetch_all_videos() -> AppResult<Vec<TikTokVideo>> {
 
     let config = config::get_config();
     let username = &config.tiktok.username;
+    let _api_key = &config.tiktok.api_key;
 
     info!("Fetching videos for TikTok user: {}", username);
 
-    // In a real implementation, this would use the TikTok API
-    // For now, we'll simulate fetching videos
-    let videos = simulate_fetch_videos(username).await?;
+    let client = Client::new();
+    
+    // Use TikTok API to fetch all videos
+    let url = format!("https://open.tiktokapis.com/v2/video/list/");
+    
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", config.tiktok.access_token.as_ref().unwrap_or(&"".to_string())))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "max_count": 100,
+            "fields": ["id", "title", "video_description", "duration", "cover_image_url", "embed_link", "create_time", "like_count", "comment_count", "share_count", "view_count"]
+        }))
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError(format!("Failed to fetch videos: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(AppError::ApiError(format!("TikTok API error: {}", response.status())));
+    }
+
+    let json: serde_json::Value = response.json().await
+        .map_err(|e| AppError::ApiError(format!("Failed to parse API response: {}", e)))?;
+
+    let mut videos = Vec::new();
+    
+    if let Some(data) = json.get("data").and_then(|d| d.get("videos")).and_then(|v| v.as_array()) {
+        for video_data in data {
+            if let Some(video) = parse_tiktok_video(video_data, username)? {
+                videos.push(video);
+            }
+        }
+    }
+
+    // Sort by creation date (oldest first)
+    videos.sort_by(|a, b| a.created_at.cmp(&b.created_at));
 
     info!("Fetched {} TikTok videos", videos.len());
 
@@ -83,10 +116,44 @@ pub async fn fetch_new_videos() -> AppResult<Vec<TikTokVideo>> {
     let config = config::get_config();
     let username = &config.tiktok.username;
 
-    // In a real implementation, this would use the TikTok API and check against
-    // a database of already processed videos
-    // For now, we'll simulate fetching new videos
-    let videos = simulate_fetch_new_videos(username).await?;
+    info!("Checking for new videos for TikTok user: {}", username);
+
+    let client = Client::new();
+    
+    // Use TikTok API to fetch recent videos
+    let url = format!("https://open.tiktokapis.com/v2/video/list/");
+    
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", config.tiktok.access_token.as_ref().unwrap_or(&"".to_string())))
+        .header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "max_count": 20,
+            "fields": ["id", "title", "video_description", "duration", "cover_image_url", "embed_link", "create_time", "like_count", "comment_count", "share_count", "view_count"]
+        }))
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError(format!("Failed to fetch videos: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(AppError::ApiError(format!("TikTok API error: {}", response.status())));
+    }
+
+    let json: serde_json::Value = response.json().await
+        .map_err(|e| AppError::ApiError(format!("Failed to parse API response: {}", e)))?;
+
+    let mut videos = Vec::new();
+    
+    if let Some(data) = json.get("data").and_then(|d| d.get("videos")).and_then(|v| v.as_array()) {
+        for video_data in data {
+            if let Some(video) = parse_tiktok_video(video_data, username)? {
+                videos.push(video);
+            }
+        }
+    }
+
+    // Sort by creation date (newest first for new videos)
+    videos.sort_by(|a, b| b.created_at.cmp(&a.created_at));
 
     info!("Fetched {} new TikTok videos", videos.len());
 
@@ -103,27 +170,6 @@ pub async fn download_video_content(video: &mut TikTokVideo) -> AppResult<()> {
         fs::create_dir_all(&download_dir).await?;
     }
 
-    // For simulation, create mock video files instead of downloading from non-existent URLs
-    if video.video_url.contains("tiktok.com") {
-        info!("Simulating download for video: {}", video.id);
-        
-        // Create mock video file
-        let video_path = download_dir.join(format!("{}.mp4", video.id));
-        let mock_video_data = create_mock_video_data();
-        fs::write(&video_path, mock_video_data).await?;
-        video.local_video_path = Some(video_path);
-
-        // Create mock cover image
-        let cover_path = download_dir.join(format!("{}.jpg", video.id));
-        let mock_cover_data = create_mock_cover_data();
-        fs::write(&cover_path, mock_cover_data).await?;
-        video.local_cover_path = Some(cover_path);
-
-        info!("Successfully created mock files for TikTok video: {}", video.id);
-        return Ok(());
-    }
-
-    // Real download logic for actual URLs
     let client = Client::new();
 
     // Download video
@@ -164,115 +210,94 @@ pub async fn download_video_content(video: &mut TikTokVideo) -> AppResult<()> {
     Ok(())
 }
 
-/// Creates mock video data for simulation
-fn create_mock_video_data() -> Vec<u8> {
-    // Create a minimal MP4 header for simulation
-    // This is just a placeholder - in real implementation, you'd use actual video data
-    vec![
-        0x00, 0x00, 0x00, 0x18, 0x66, 0x74, 0x79, 0x70, 0x6D, 0x70, 0x34, 0x31,
-        0x00, 0x00, 0x00, 0x00, 0x6D, 0x70, 0x34, 0x31, 0x69, 0x73, 0x6F, 0x6D,
-        // Add some dummy data to make it look like a real file
-        0x00, 0x00, 0x00, 0x10, 0x6D, 0x64, 0x61, 0x74, 0x48, 0x65, 0x6C, 0x6C,
-        0x6F, 0x20, 0x54, 0x69, 0x6B, 0x54, 0x6F, 0x6B, 0x21, 0x00, 0x00, 0x00,
-    ]
-}
+/// Parse TikTok video data from API response
+fn parse_tiktok_video(video_data: &serde_json::Value, username: &str) -> AppResult<Option<TikTokVideo>> {
+    let id = video_data.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let _title = video_data.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let description = video_data.get("video_description").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let duration = video_data.get("duration").and_then(|v| v.as_f64()).unwrap_or(0.0);
+    let cover_url = video_data.get("cover_image_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let embed_link = video_data.get("embed_link").and_then(|v| v.as_str()).unwrap_or("").to_string();
+    let create_time = video_data.get("create_time").and_then(|v| v.as_i64()).unwrap_or(0);
+    let like_count = video_data.get("like_count").and_then(|v| v.as_u64()).unwrap_or(0);
+    let comment_count = video_data.get("comment_count").and_then(|v| v.as_u64()).unwrap_or(0);
+    let share_count = video_data.get("share_count").and_then(|v| v.as_u64()).unwrap_or(0);
+    let view_count = video_data.get("view_count").and_then(|v| v.as_u64()).unwrap_or(0);
 
-/// Creates mock cover image data for simulation
-fn create_mock_cover_data() -> Vec<u8> {
-    // Create a minimal JPEG header for simulation
-    vec![
-        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01,
-        0x01, 0x01, 0x00, 0x48, 0x00, 0x48, 0x00, 0x00, 0xFF, 0xD9,
-    ]
-}
-
-/// Simulates fetching videos from TikTok (for development/testing)
-async fn simulate_fetch_videos(username: &str) -> AppResult<Vec<TikTokVideo>> {
-    info!("Simulating fetch of all videos for user: {}", username);
-
-    // Simulate API delay
-    sleep(Duration::from_millis(500)).await;
-
-    // Create some sample videos
-    let mut videos = Vec::new();
-
-    for i in 1..6 {
-        let video = TikTokVideo {
-            id: format!("video_{}", i),
-            url: format!("https://tiktok.com/@{}/video/{}", username, i),
-            description: format!("This is video #{} #fyp #viral", i),
-            created_at: Utc::now() - chrono::Duration::days(i),
-            likes: 1000 * i as u64,
-            comments: 100 * i as u64,
-            shares: 50 * i as u64,
-            views: 5000 * i as u64,
-            duration: 15.0,
-            video_url: format!("https://tiktok.com/video/{}.mp4", i),
-            cover_url: format!("https://tiktok.com/cover/{}.jpg", i),
-            hashtags: vec!["fyp".to_string(), "viral".to_string()],
-            local_video_path: None,
-            local_cover_path: None,
-            is_posted: false,
-        };
-
-        videos.push(video);
+    if id.is_empty() {
+        return Ok(None);
     }
 
-    Ok(videos)
+    // Parse hashtags from description
+    let hashtags = extract_hashtags(&description);
+
+    // Convert timestamp to DateTime
+    let created_at = DateTime::from_timestamp(create_time, 0)
+        .unwrap_or_else(|| Utc::now());
+
+    let video = TikTokVideo {
+        id,
+        url: embed_link,
+        description,
+        created_at,
+        likes: like_count,
+        comments: comment_count,
+        shares: share_count,
+        views: view_count,
+        duration,
+        video_url: format!("https://www.tiktok.com/@{}/video/{}", username, video_data.get("id").and_then(|v| v.as_str()).unwrap_or("")),
+        cover_url,
+        hashtags,
+        local_video_path: None,
+        local_cover_path: None,
+        is_posted: false,
+    };
+
+    Ok(Some(video))
 }
 
-/// Simulates fetching new videos from TikTok (for development/testing)
-async fn simulate_fetch_new_videos(username: &str) -> AppResult<Vec<TikTokVideo>> {
-    info!("Simulating fetch of new videos for user: {}", username);
-
-    // Simulate API delay
-    sleep(Duration::from_millis(500)).await;
-
-    // Create a deterministic new video based on current time, but only return it occasionally
-    // This prevents the infinite loop of always returning the same "new" video
-    let now = Utc::now();
-    let minutes_since_midnight = (now.timestamp() % 86400) / 60;
+/// Extract hashtags from description text
+fn extract_hashtags(description: &str) -> Vec<String> {
+    let mut hashtags = Vec::new();
+    let words: Vec<&str> = description.split_whitespace().collect();
     
-    // Only return a "new" video every 30 minutes (to simulate realistic posting frequency)
-    if minutes_since_midnight % 30 == 0 {
-        let video = TikTokVideo {
-            id: format!("video_new_{}", now.timestamp() / 1800), // Group by 30-minute periods
-            url: format!("https://tiktok.com/@{}/video/new", username),
-            description: "This is a new video #fyp #viral #trending".to_string(),
-            created_at: now,
-            likes: 0,
-            comments: 0,
-            shares: 0,
-            views: 0,
-            duration: 20.0,
-            video_url: "https://tiktok.com/video/new.mp4".to_string(),
-            cover_url: "https://tiktok.com/cover/new.jpg".to_string(),
-            hashtags: vec![
-                "fyp".to_string(),
-                "viral".to_string(),
-                "trending".to_string(),
-            ],
-            local_video_path: None,
-            local_cover_path: None,
-            is_posted: false,
-        };
-
-        info!("Returning simulated new video: {}", video.id);
-        Ok(vec![video])
-    } else {
-        info!("No new videos available at this time");
-        Ok(vec![])
+    for word in words {
+        if word.starts_with('#') && word.len() > 1 {
+            hashtags.push(word[1..].to_string());
+        }
     }
+    
+    hashtags
 }
 
 /// Authenticates with the TikTok API
 pub async fn authenticate() -> AppResult<()> {
     info!("Authenticating with TikTok API");
 
-    let _config = config::get_config();
+    let config = config::get_config();
+    let client = Client::new();
 
-    // In a real implementation, this would use the TikTok API for authentication
-    // For now, we'll just simulate authentication
+    // Use TikTok API for authentication
+    let url = "https://open.tiktokapis.com/v2/oauth/token/";
+    
+    let response = client
+        .post(url)
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .form(&[
+            ("client_key", &config.tiktok.api_key),
+            ("client_secret", &config.tiktok.api_secret),
+            ("grant_type", &"client_credentials".to_string()),
+        ])
+        .send()
+        .await
+        .map_err(|e| AppError::AuthenticationError(format!("Failed to authenticate: {}", e)))?;
+
+    if !response.status().is_success() {
+        return Err(AppError::AuthenticationError(format!("TikTok authentication failed: {}", response.status())));
+    }
+
+    let _json: serde_json::Value = response.json().await
+        .map_err(|e| AppError::AuthenticationError(format!("Failed to parse auth response: {}", e)))?;
 
     info!("Successfully authenticated with TikTok API");
 

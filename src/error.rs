@@ -7,6 +7,10 @@ pub enum AppError {
     #[error("Failed to fetch TikTok content: {0}")]
     TikTokFetchError(String),
 
+    /// Error when making API calls
+    #[error("API error: {0}")]
+    ApiError(String),
+
     /// Error when processing content
     #[error("Failed to process content: {0}")]
     ContentProcessingError(String),

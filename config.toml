@@ -1,41 +1,59 @@
 [tiktok]
-username = "your_tiktok_username"
-api_key = "your_tiktok_api_key"
-api_secret = "your_tiktok_api_secret"
+username = ""
+api_key = ""
+api_secret = ""
 
 [facebook]
-page_id = "your_facebook_page_id"
-api_key = "your_facebook_api_key"
-api_secret = "your_facebook_api_secret"
-access_token = "your_facebook_access_token"
+page_id = ""
+api_key = ""
+api_secret = ""
+access_token = ""
+email = ""
+password = ""
 
 [instagram]
-account_id = "your_instagram_account_id"
-api_key = "your_instagram_api_key"
-api_secret = "your_instagram_api_secret"
-access_token = "your_instagram_access_token"
+account_id = ""
+api_key = ""
+api_secret = ""
+access_token = ""
+email = ""
+password = ""
 
 [youtube]
-channel_id = "your_youtube_channel_id"
-api_key = "your_youtube_api_key"
-client_id = "your_youtube_client_id"
-client_secret = "your_youtube_client_secret"
-refresh_token = "your_youtube_refresh_token"
+channel_id = ""
+api_key = ""
+client_id = ""
+client_secret = ""
+refresh_token = ""
+email = ""
+password = ""
 
 [content]
-hashtag_count = 5
+hashtag_count = 10
 custom_hashtags = [
     "fyp",
     "viral",
+    "trending",
 ]
 tagline_templates = [
     "You won't believe what happens next! 😱",
     "This changed everything for me! 🔥",
     "Wait for it... 👀",
+    "Mind blown! 🤯",
+    "This is insane! 🚀",
 ]
 use_trending_hashtags = true
 
 [scheduler]
-check_interval_minutes = 5
+check_interval_minutes = 10
 legacy_post_interval_minutes = 10
-max_posts_per_day = 24
+max_posts_per_day = 144
+
+[browser]
+headless = true
+page_load_timeout = 30
+element_wait_timeout = 10
+max_retries = 3
+retry_delay_ms = 2000
+window_width = 1920
+window_height = 1080
