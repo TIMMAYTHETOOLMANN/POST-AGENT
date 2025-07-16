@@ -17,9 +17,6 @@ struct PostDatabase {
     /// Map of video IDs to posting status
     videos: FxHashMap<String, PostStatus>,
 
-    /// The ID of the next legacy video to post
-    next_legacy_video_id: Option<String>,
-
     /// Last time the database was updated
     last_updated: DateTime<Utc>,
 }
@@ -114,63 +111,18 @@ pub async fn mark_as_posted(video_id: &str) -> AppResult<()> {
 pub async fn get_next_legacy_video() -> AppResult<Option<TikTokVideo>> {
     debug!("Getting next legacy video to post");
 
-    // Use a loop instead of recursion to handle the case where we need to initialize
-    // the next_legacy_video_id and then fetch the video
-    loop {
-        let mut db_lock = DB.lock().await;
-        let db = db_lock
-            .as_mut()
-            .ok_or_else(|| AppError::SchedulerError("Scheduler not initialized".to_string()))?;
-
-        // If we have a next legacy video ID, fetch that video
-        if let Some(video_id) = &db.next_legacy_video_id {
-            // In a real implementation, this would fetch the video from a database or API
-            // For now, we'll simulate fetching the video
-            let video = simulate_fetch_video(video_id).await?;
-
-            // Update the next legacy video ID to the next one in chronological order
-            // In a real implementation, this would be determined by fetching the next oldest video
-            // For now, we'll just increment the ID
-            if let Some(id) = &db.next_legacy_video_id {
-                if id.starts_with("video_") {
-                    if let Ok(num) = id.trim_start_matches("video_").parse::<i32>() {
-                        let next_num = num + 1;
-                        if next_num <= 5 {
-                            // Limit to our simulated videos
-                            db.next_legacy_video_id = Some(format!("video_{}", next_num));
-                        } else {
-                            db.next_legacy_video_id = None;
-                        }
-                    }
-                }
-            }
-
-            // Save the database
-            save_database(db).await?;
-
-            debug!("Next legacy video: {:?}", video.id);
-
+    // Get all videos and find the next unposted one (oldest first)
+    let videos = crate::tiktok::fetch_all_videos().await?;
+    
+    for video in videos {
+        if !is_video_posted(&video.id).await? {
+            debug!("Next legacy video: {}", video.id);
             return Ok(Some(video));
-        } else {
-            // If we don't have a next legacy video ID, check if we need to initialize it
-            if db.videos.is_empty() {
-                // In a real implementation, this would fetch the oldest video
-                // For now, we'll just set it to the first simulated video
-                db.next_legacy_video_id = Some("video_1".to_string());
-
-                // Save the database
-                save_database(db).await?;
-
-                // Release the lock and continue the loop to fetch the video
-                drop(db_lock);
-                continue;
-            }
-
-            debug!("No more legacy videos to post");
-
-            return Ok(None);
         }
     }
+
+    debug!("No more legacy videos to post");
+    Ok(None)
 }
 
 /// Check if a video has been posted
@@ -202,7 +154,6 @@ async fn load_database() -> AppResult<PostDatabase> {
         // Create a new database
         let db = PostDatabase {
             videos: FxHashMap::default(),
-            next_legacy_video_id: None,
             last_updated: Utc::now(),
         };
 
@@ -253,40 +204,4 @@ fn get_database_path() -> AppResult<PathBuf> {
     let db_path = db_dir.join("posts.json");
 
     Ok(db_path)
-}
-
-/// Simulate fetching a video by ID (for development/testing)
-async fn simulate_fetch_video(video_id: &str) -> AppResult<TikTokVideo> {
-    debug!("Simulating fetch of video: {}", video_id);
-
-    // Parse the video number from the ID
-    let video_num = if video_id.starts_with("video_") {
-        video_id
-            .trim_start_matches("video_")
-            .parse::<i32>()
-            .unwrap_or(1)
-    } else {
-        1
-    };
-
-    // Create a simulated video
-    let video = TikTokVideo {
-        id: video_id.to_string(),
-        url: format!("https://tiktok.com/@username/video/{}", video_id),
-        description: format!("This is legacy video #{} #fyp #viral", video_num),
-        created_at: Utc::now() - chrono::Duration::days(video_num as i64 * 7),
-        likes: 1000 * video_num as u64,
-        comments: 100 * video_num as u64,
-        shares: 50 * video_num as u64,
-        views: 5000 * video_num as u64,
-        duration: 15.0,
-        video_url: format!("https://tiktok.com/video/{}.mp4", video_id),
-        cover_url: format!("https://tiktok.com/cover/{}.jpg", video_id),
-        hashtags: vec!["fyp".to_string(), "viral".to_string()],
-        local_video_path: Some(PathBuf::from(format!("downloads/{}.mp4", video_id))),
-        local_cover_path: Some(PathBuf::from(format!("downloads/{}.jpg", video_id))),
-        is_posted: false,
-    };
-
-    Ok(video)
 }
