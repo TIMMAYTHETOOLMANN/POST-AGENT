@@ -130,6 +130,11 @@ async fn initialize_configuration() -> AppResult<config::AppConfig> {
 async fn initialize_components() -> AppResult<()> {
     scheduler::init().await?;
     info!("Scheduler database initialized");
+    
+    // Initialize circuit breakers
+    app::init_circuit_breakers();
+    info!("Circuit breakers initialized");
+    
     Ok(())
 }
 
