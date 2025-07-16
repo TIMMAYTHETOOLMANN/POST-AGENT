@@ -16,8 +16,9 @@ Cargo.lock
 *.tmp
 *.temp
 
-# Downloads
+# Downloads and data
 downloads/
+data/
 
 # Generated HTML files (documentation, IDE exports, etc.)
 *.html
