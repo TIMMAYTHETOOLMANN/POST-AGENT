@@ -34,3 +34,13 @@ downloads/
 # OS
 .DS_Store
 Thumbs.db
+
+# Deployment artifacts
+deployment_*.log
+deployment_status.json
+.project_type
+.deployment_method
+.rollback_commit
+deploy-history/
+agent.log
+agent.pid
