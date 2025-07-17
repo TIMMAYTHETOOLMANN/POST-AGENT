@@ -207,6 +207,25 @@ launch.bat setup
 
 This will handle everything: dependencies, building, configuration, and validation.
 
+## Universal Deployment
+
+For a streamlined, cross-platform deployment experience, you can also use the Universal Deployment Script:
+
+```bash
+./deploy.sh deploy
+```
+
+This script provides:
+- **Automatic project type detection** (Node.js, Python, Docker, Rust)
+- **Environment variable validation** with GUI prompts
+- **Multiple deployment methods** (docker-compose, GitLab CI, custom scripts)
+- **Real-time monitoring** with progress updates
+- **Service validation** and health checking
+- **Git snapshots** with rollback capability
+- **Agent-friendly JSON output**
+
+See [UNIVERSAL_DEPLOYMENT.md](UNIVERSAL_DEPLOYMENT.md) for complete documentation.
+
 ## Using the Launcher
 
 The launcher script provides an easy way to manage the application:
