@@ -4,27 +4,17 @@ api_key = ""
 api_secret = ""
 
 [facebook]
-page_id = ""
-api_key = ""
-api_secret = ""
-access_token = ""
+profile_id = ""
 email = ""
 password = ""
 
 [instagram]
 account_id = ""
-api_key = ""
-api_secret = ""
-access_token = ""
 email = ""
 password = ""
 
 [youtube]
 channel_id = ""
-api_key = ""
-client_id = ""
-client_secret = ""
-refresh_token = ""
 email = ""
 password = ""
 
@@ -57,3 +47,7 @@ max_retries = 3
 retry_delay_ms = 2000
 window_width = 1920
 window_height = 1080
+
+[system]
+automation_mode = "playwright"
+debug = false

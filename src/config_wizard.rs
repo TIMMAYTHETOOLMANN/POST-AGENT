@@ -39,74 +39,66 @@ pub fn run_wizard() -> AppResult<AppConfig> {
     }
 
     // Facebook configuration
-    println!("\n=== Facebook Configuration ===");
-    config.facebook.page_id = Input::new()
-        .with_prompt("Facebook page ID")
-        .default(config.facebook.page_id)
+    println!("\n=== Facebook Personal Account Configuration ===");
+    config.facebook.profile_id = Input::new()
+        .with_prompt("Facebook profile ID (numeric user ID)")
+        .default(config.facebook.profile_id)
         .interact()?;
 
-    config.facebook.api_key = Input::new()
-        .with_prompt("Facebook API key")
-        .default(config.facebook.api_key)
+    config.facebook.email = Input::new()
+        .with_prompt("Facebook login email")
+        .default(config.facebook.email)
         .interact()?;
 
-    config.facebook.api_secret = Input::new()
-        .with_prompt("Facebook API secret")
-        .default(config.facebook.api_secret)
-        .interact()?;
-
-    config.facebook.access_token = Input::new()
-        .with_prompt("Facebook access token")
-        .default(config.facebook.access_token)
+    config.facebook.password = Input::new()
+        .with_prompt("Facebook login password")
+        .default(config.facebook.password)
         .interact()?;
 
     // Instagram configuration
-    println!("\n=== Instagram Configuration ===");
+    println!("\n=== Instagram Personal Account Configuration ===");
     config.instagram.account_id = Input::new()
-        .with_prompt("Instagram account ID")
+        .with_prompt("Instagram account ID (numeric user ID)")
         .default(config.instagram.account_id)
         .interact()?;
 
-    config.instagram.api_key = Input::new()
-        .with_prompt("Instagram API key")
-        .default(config.instagram.api_key)
+    config.instagram.email = Input::new()
+        .with_prompt("Instagram login email or username")
+        .default(config.instagram.email)
         .interact()?;
 
-    config.instagram.api_secret = Input::new()
-        .with_prompt("Instagram API secret")
-        .default(config.instagram.api_secret)
-        .interact()?;
-
-    config.instagram.access_token = Input::new()
-        .with_prompt("Instagram access token")
-        .default(config.instagram.access_token)
+    config.instagram.password = Input::new()
+        .with_prompt("Instagram login password")
+        .default(config.instagram.password)
         .interact()?;
 
     // YouTube configuration
-    println!("\n=== YouTube Configuration ===");
+    println!("\n=== YouTube Personal Account Configuration ===");
     config.youtube.channel_id = Input::new()
-        .with_prompt("YouTube channel ID")
+        .with_prompt("YouTube channel ID (starts with UC)")
         .default(config.youtube.channel_id)
         .interact()?;
 
-    config.youtube.api_key = Input::new()
-        .with_prompt("YouTube API key")
-        .default(config.youtube.api_key)
+    config.youtube.email = Input::new()
+        .with_prompt("YouTube/Google login email")
+        .default(config.youtube.email)
         .interact()?;
 
-    config.youtube.client_id = Input::new()
-        .with_prompt("YouTube client ID")
-        .default(config.youtube.client_id)
+    config.youtube.password = Input::new()
+        .with_prompt("YouTube/Google login password")
+        .default(config.youtube.password)
         .interact()?;
 
-    config.youtube.client_secret = Input::new()
-        .with_prompt("YouTube client secret")
-        .default(config.youtube.client_secret)
+    // System configuration
+    println!("\n=== System Configuration ===");
+    config.system.automation_mode = Input::new()
+        .with_prompt("Automation mode (playwright or api)")
+        .default(config.system.automation_mode)
         .interact()?;
 
-    config.youtube.refresh_token = Input::new()
-        .with_prompt("YouTube refresh token")
-        .default(config.youtube.refresh_token)
+    config.system.debug = Confirm::new()
+        .with_prompt("Enable debug mode?")
+        .default(config.system.debug)
         .interact()?;
 
     // Content configuration
@@ -223,21 +215,26 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
 
     // Facebook
     env_content.push_str(&format!(
-        "APP__FACEBOOK__PAGE_ID={}\n",
-        config.facebook.page_id
+        "APP__FACEBOOK__PROFILE_ID={}\n",
+        config.facebook.profile_id
     ));
     env_content.push_str(&format!(
-        "APP__FACEBOOK__API_KEY={}\n",
-        config.facebook.api_key
+        "APP__FACEBOOK__EMAIL={}\n",
+        config.facebook.email
     ));
     env_content.push_str(&format!(
-        "APP__FACEBOOK__API_SECRET={}\n",
-        config.facebook.api_secret
+        "APP__FACEBOOK__PASSWORD={}\n",
+        config.facebook.password
     ));
-    env_content.push_str(&format!(
-        "APP__FACEBOOK__ACCESS_TOKEN={}\n",
-        config.facebook.access_token
-    ));
+    if let Some(api_key) = &config.facebook.api_key {
+        env_content.push_str(&format!("APP__FACEBOOK__API_KEY={}\n", api_key));
+    }
+    if let Some(api_secret) = &config.facebook.api_secret {
+        env_content.push_str(&format!("APP__FACEBOOK__API_SECRET={}\n", api_secret));
+    }
+    if let Some(access_token) = &config.facebook.access_token {
+        env_content.push_str(&format!("APP__FACEBOOK__ACCESS_TOKEN={}\n", access_token));
+    }
 
     // Instagram
     env_content.push_str(&format!(
@@ -245,17 +242,22 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
         config.instagram.account_id
     ));
     env_content.push_str(&format!(
-        "APP__INSTAGRAM__API_KEY={}\n",
-        config.instagram.api_key
+        "APP__INSTAGRAM__EMAIL={}\n",
+        config.instagram.email
     ));
     env_content.push_str(&format!(
-        "APP__INSTAGRAM__API_SECRET={}\n",
-        config.instagram.api_secret
+        "APP__INSTAGRAM__PASSWORD={}\n",
+        config.instagram.password
     ));
-    env_content.push_str(&format!(
-        "APP__INSTAGRAM__ACCESS_TOKEN={}\n",
-        config.instagram.access_token
-    ));
+    if let Some(api_key) = &config.instagram.api_key {
+        env_content.push_str(&format!("APP__INSTAGRAM__API_KEY={}\n", api_key));
+    }
+    if let Some(api_secret) = &config.instagram.api_secret {
+        env_content.push_str(&format!("APP__INSTAGRAM__API_SECRET={}\n", api_secret));
+    }
+    if let Some(access_token) = &config.instagram.access_token {
+        env_content.push_str(&format!("APP__INSTAGRAM__ACCESS_TOKEN={}\n", access_token));
+    }
 
     // YouTube
     env_content.push_str(&format!(
@@ -263,21 +265,25 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
         config.youtube.channel_id
     ));
     env_content.push_str(&format!(
-        "APP__YOUTUBE__API_KEY={}\n",
-        config.youtube.api_key
+        "APP__YOUTUBE__EMAIL={}\n",
+        config.youtube.email
     ));
     env_content.push_str(&format!(
-        "APP__YOUTUBE__CLIENT_ID={}\n",
-        config.youtube.client_id
+        "APP__YOUTUBE__PASSWORD={}\n",
+        config.youtube.password
     ));
-    env_content.push_str(&format!(
-        "APP__YOUTUBE__CLIENT_SECRET={}\n",
-        config.youtube.client_secret
-    ));
-    env_content.push_str(&format!(
-        "APP__YOUTUBE__REFRESH_TOKEN={}\n",
-        config.youtube.refresh_token
-    ));
+    if let Some(api_key) = &config.youtube.api_key {
+        env_content.push_str(&format!("APP__YOUTUBE__API_KEY={}\n", api_key));
+    }
+    if let Some(client_id) = &config.youtube.client_id {
+        env_content.push_str(&format!("APP__YOUTUBE__CLIENT_ID={}\n", client_id));
+    }
+    if let Some(client_secret) = &config.youtube.client_secret {
+        env_content.push_str(&format!("APP__YOUTUBE__CLIENT_SECRET={}\n", client_secret));
+    }
+    if let Some(refresh_token) = &config.youtube.refresh_token {
+        env_content.push_str(&format!("APP__YOUTUBE__REFRESH_TOKEN={}\n", refresh_token));
+    }
 
     // Content
     env_content.push_str(&format!(
@@ -301,6 +307,16 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
     env_content.push_str(&format!(
         "APP__SCHEDULER__MAX_POSTS_PER_DAY={}\n",
         config.scheduler.max_posts_per_day
+    ));
+
+    // System
+    env_content.push_str(&format!(
+        "APP__SYSTEM__AUTOMATION_MODE={}\n",
+        config.system.automation_mode
+    ));
+    env_content.push_str(&format!(
+        "APP__SYSTEM__DEBUG={}\n",
+        config.system.debug
     ));
 
     // Write to file
