@@ -28,6 +28,9 @@ pub struct AppConfig {
 
     /// Browser automation configuration
     pub browser: BrowserConfig,
+
+    /// System configuration
+    pub system: SystemConfig,
 }
 
 /// TikTok API configuration
@@ -49,17 +52,17 @@ pub struct TikTokConfig {
 /// Facebook API configuration
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FacebookConfig {
-    /// Facebook page ID
-    pub page_id: String,
+    /// Facebook profile ID (for personal accounts) or page ID (for business)
+    pub profile_id: String,
 
     /// Facebook API key (optional, for hybrid approach)
-    pub api_key: String,
+    pub api_key: Option<String>,
 
     /// Facebook API secret (optional, for hybrid approach)
-    pub api_secret: String,
+    pub api_secret: Option<String>,
 
     /// Facebook access token (optional, for hybrid approach)
-    pub access_token: String,
+    pub access_token: Option<String>,
 
     /// Facebook login email for browser automation
     pub email: String,
@@ -75,13 +78,13 @@ pub struct InstagramConfig {
     pub account_id: String,
 
     /// Instagram API key (optional, for hybrid approach)
-    pub api_key: String,
+    pub api_key: Option<String>,
 
     /// Instagram API secret (optional, for hybrid approach)
-    pub api_secret: String,
+    pub api_secret: Option<String>,
 
     /// Instagram access token (optional, for hybrid approach)
-    pub access_token: String,
+    pub access_token: Option<String>,
 
     /// Instagram login email for browser automation
     pub email: String,
@@ -97,16 +100,16 @@ pub struct YouTubeConfig {
     pub channel_id: String,
 
     /// YouTube API key (optional, for hybrid approach)
-    pub api_key: String,
+    pub api_key: Option<String>,
 
     /// YouTube client ID (optional, for hybrid approach)
-    pub client_id: String,
+    pub client_id: Option<String>,
 
     /// YouTube client secret (optional, for hybrid approach)
-    pub client_secret: String,
+    pub client_secret: Option<String>,
 
     /// YouTube refresh token (optional, for hybrid approach)
-    pub refresh_token: String,
+    pub refresh_token: Option<String>,
 
     /// YouTube login email for browser automation
     pub email: String,
@@ -172,6 +175,16 @@ pub struct BrowserConfig {
     pub user_agent: Option<String>,
 }
 
+/// System configuration
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct SystemConfig {
+    /// Automation mode: 'playwright' or 'api'
+    pub automation_mode: String,
+
+    /// Debug mode: true for verbose logging, false for production
+    pub debug: bool,
+}
+
 /// Default configuration values
 impl Default for AppConfig {
     fn default() -> Self {
@@ -183,27 +196,27 @@ impl Default for AppConfig {
                 access_token: None,
             },
             facebook: FacebookConfig {
-                page_id: "".to_string(),
-                api_key: "".to_string(),
-                api_secret: "".to_string(),
-                access_token: "".to_string(),
+                profile_id: "".to_string(),
+                api_key: None,
+                api_secret: None,
+                access_token: None,
                 email: "".to_string(),
                 password: "".to_string(),
             },
             instagram: InstagramConfig {
                 account_id: "".to_string(),
-                api_key: "".to_string(),
-                api_secret: "".to_string(),
-                access_token: "".to_string(),
+                api_key: None,
+                api_secret: None,
+                access_token: None,
                 email: "".to_string(),
                 password: "".to_string(),
             },
             youtube: YouTubeConfig {
                 channel_id: "".to_string(),
-                api_key: "".to_string(),
-                client_id: "".to_string(),
-                client_secret: "".to_string(),
-                refresh_token: "".to_string(),
+                api_key: None,
+                client_id: None,
+                client_secret: None,
+                refresh_token: None,
                 email: "".to_string(),
                 password: "".to_string(),
             },
@@ -233,6 +246,10 @@ impl Default for AppConfig {
                 window_width: 1920,
                 window_height: 1080,
                 user_agent: None,
+            },
+            system: SystemConfig {
+                automation_mode: "playwright".to_string(),
+                debug: false,
             },
         }
     }

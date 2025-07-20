@@ -6,6 +6,8 @@ This document outlines all the environment variables that need to be configured 
 
 The application can be configured using environment variables with the prefix `APP__` and double underscores (`__`) as separators. These environment variables can be set in your system environment or in a `.env` file.
 
+**Note:** This configuration is optimized for personal account access using browser automation (Playwright/Chromium), bypassing API restrictions typically associated with business accounts.
+
 ## Required Environment Variables
 
 ### TikTok Configuration
@@ -16,9 +18,9 @@ APP__TIKTOK__API_SECRET=your_tiktok_api_secret
 APP__TIKTOK__ACCESS_TOKEN=your_tiktok_access_token  # Optional
 ```
 
-### Facebook Configuration
+### Facebook Personal Account Configuration
 ```
-APP__FACEBOOK__PAGE_ID=your_facebook_page_id
+APP__FACEBOOK__PROFILE_ID=your_numeric_facebook_profile_id  # e.g. 10001234567890
 APP__FACEBOOK__EMAIL=your_facebook_email@example.com
 APP__FACEBOOK__PASSWORD=your_facebook_password
 APP__FACEBOOK__API_KEY=your_facebook_api_key  # Optional, for hybrid approach
@@ -26,9 +28,9 @@ APP__FACEBOOK__API_SECRET=your_facebook_api_secret  # Optional, for hybrid appro
 APP__FACEBOOK__ACCESS_TOKEN=your_facebook_access_token  # Optional, for hybrid approach
 ```
 
-### Instagram Configuration
+### Instagram Personal Account Configuration
 ```
-APP__INSTAGRAM__ACCOUNT_ID=your_instagram_account_id
+APP__INSTAGRAM__ACCOUNT_ID=your_numeric_instagram_account_id  # e.g. 123456789
 APP__INSTAGRAM__EMAIL=your_instagram_email@example.com
 APP__INSTAGRAM__PASSWORD=your_instagram_password
 APP__INSTAGRAM__API_KEY=your_instagram_api_key  # Optional, for hybrid approach
@@ -36,15 +38,21 @@ APP__INSTAGRAM__API_SECRET=your_instagram_api_secret  # Optional, for hybrid app
 APP__INSTAGRAM__ACCESS_TOKEN=your_instagram_access_token  # Optional, for hybrid approach
 ```
 
-### YouTube Configuration
+### YouTube Personal Account Configuration
 ```
-APP__YOUTUBE__CHANNEL_ID=your_youtube_channel_id
+APP__YOUTUBE__CHANNEL_ID=your_youtube_channel_id  # e.g. UCxxxxxxxxxxxxxxxx
 APP__YOUTUBE__EMAIL=your_youtube_email@example.com
 APP__YOUTUBE__PASSWORD=your_youtube_password
 APP__YOUTUBE__API_KEY=your_youtube_api_key  # Optional, for hybrid approach
 APP__YOUTUBE__CLIENT_ID=your_youtube_client_id  # Optional, for hybrid approach
 APP__YOUTUBE__CLIENT_SECRET=your_youtube_client_secret  # Optional, for hybrid approach
 APP__YOUTUBE__REFRESH_TOKEN=your_youtube_refresh_token  # Optional, for hybrid approach
+```
+
+### System Configuration
+```
+APP__SYSTEM__AUTOMATION_MODE=playwright  # 'playwright' or 'api' (default: playwright)
+APP__SYSTEM__DEBUG=false  # 'true' for verbose logging, 'false' for production
 ```
 
 ### Content Configuration
