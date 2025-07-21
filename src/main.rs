@@ -3,7 +3,7 @@ use log::{error, info, warn};
 use std::env;
 use tiktok_crosspost::config_wizard;
 use tiktok_crosspost::error::{AppError, AppResult};
-use tiktok_crosspost::{app, config, job_scheduler, platforms, scheduler, tiktok};
+use tiktok_crosspost::{app, config, config_watcher, health_monitor, job_scheduler, platforms, scheduler, session_manager, tiktok};
 use tokio::time::Duration;
 
 /// TikTok Cross-posting Application
@@ -130,6 +130,18 @@ async fn initialize_configuration() -> AppResult<config::AppConfig> {
 async fn initialize_components() -> AppResult<()> {
     scheduler::init().await?;
     info!("Scheduler database initialized");
+    
+    // Initialize session manager
+    session_manager::init_session_manager().await?;
+    info!("Session manager initialized");
+    
+    // Initialize health monitor
+    health_monitor::init_health_monitor().await?;
+    info!("Health monitor initialized");
+    
+    // Initialize configuration watcher
+    config_watcher::init_config_watcher().await?;
+    info!("Configuration watcher initialized");
     
     Ok(())
 }

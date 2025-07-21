@@ -98,7 +98,7 @@ async fn post_to_facebook(content: &ProcessedContent) -> AppResult<()> {
         &facebook_config.email,
         &facebook_config.password,
         &content.enhanced_description,
-        video_path,
+        std::path::Path::new(video_path),
     )
     .await?;
 
@@ -131,7 +131,7 @@ async fn post_to_instagram(content: &ProcessedContent) -> AppResult<()> {
         &instagram_config.email,
         &instagram_config.password,
         &content.enhanced_description,
-        video_path,
+        std::path::Path::new(video_path),
     )
     .await?;
 
@@ -164,7 +164,7 @@ async fn post_to_youtube(content: &ProcessedContent) -> AppResult<()> {
         &youtube_config.email,
         &youtube_config.password,
         &content.enhanced_description,
-        video_path,
+        std::path::Path::new(video_path),
     )
     .await?;
 
