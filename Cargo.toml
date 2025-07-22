@@ -43,6 +43,9 @@ headless_chrome = "1.0"
 # Performance optimizations
 rustc-hash = "1.1"
 
+# Cryptography for content backup
+sha2 = "0.10"
+
 [[bin]]
 name = "config_wizard"
 path = "src/bin/config_wizard.rs"
