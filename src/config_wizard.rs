@@ -1,6 +1,6 @@
 use crate::config::AppConfig;
 use crate::error::AppResult;
-use dialoguer::{Confirm, Input};
+use dialoguer::{Confirm, Input, Password};
 use std::fs;
 
 /// Run the interactive configuration wizard
@@ -18,25 +18,14 @@ pub fn run_wizard() -> AppResult<AppConfig> {
         .default(config.tiktok.username)
         .interact()?;
 
-    config.tiktok.api_key = Input::new()
-        .with_prompt("TikTok API key")
-        .default(config.tiktok.api_key)
+    config.tiktok.email = Input::new()
+        .with_prompt("TikTok login email")
+        .default(config.tiktok.email)
         .interact()?;
 
-    config.tiktok.api_secret = Input::new()
-        .with_prompt("TikTok API secret")
-        .default(config.tiktok.api_secret)
+    config.tiktok.password = Password::new()
+        .with_prompt("TikTok login password")
         .interact()?;
-
-    let has_access_token = Confirm::new()
-        .with_prompt("Do you have a TikTok access token?")
-        .default(false)
-        .interact()?;
-
-    if has_access_token {
-        config.tiktok.access_token =
-            Some(Input::new().with_prompt("TikTok access token").interact()?);
-    }
 
     // Facebook configuration
     println!("\n=== Facebook Personal Account Configuration ===");
@@ -50,9 +39,8 @@ pub fn run_wizard() -> AppResult<AppConfig> {
         .default(config.facebook.email)
         .interact()?;
 
-    config.facebook.password = Input::new()
+    config.facebook.password = Password::new()
         .with_prompt("Facebook login password")
-        .default(config.facebook.password)
         .interact()?;
 
     // Instagram configuration
@@ -67,9 +55,8 @@ pub fn run_wizard() -> AppResult<AppConfig> {
         .default(config.instagram.email)
         .interact()?;
 
-    config.instagram.password = Input::new()
+    config.instagram.password = Password::new()
         .with_prompt("Instagram login password")
-        .default(config.instagram.password)
         .interact()?;
 
     // YouTube configuration
@@ -84,9 +71,8 @@ pub fn run_wizard() -> AppResult<AppConfig> {
         .default(config.youtube.email)
         .interact()?;
 
-    config.youtube.password = Input::new()
+    config.youtube.password = Password::new()
         .with_prompt("YouTube/Google login password")
-        .default(config.youtube.password)
         .interact()?;
 
     // System configuration
@@ -204,14 +190,14 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
         "APP__TIKTOK__USERNAME={}\n",
         config.tiktok.username
     ));
-    env_content.push_str(&format!("APP__TIKTOK__API_KEY={}\n", config.tiktok.api_key));
     env_content.push_str(&format!(
-        "APP__TIKTOK__API_SECRET={}\n",
-        config.tiktok.api_secret
+        "APP__TIKTOK__EMAIL={}\n", 
+        config.tiktok.email
     ));
-    if let Some(token) = &config.tiktok.access_token {
-        env_content.push_str(&format!("APP__TIKTOK__ACCESS_TOKEN={}\n", token));
-    }
+    env_content.push_str(&format!(
+        "APP__TIKTOK__PASSWORD={}\n", 
+        config.tiktok.password
+    ));
 
     // Facebook
     env_content.push_str(&format!(
@@ -226,16 +212,12 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
         "APP__FACEBOOK__PASSWORD={}\n",
         config.facebook.password
     ));
-    if let Some(api_key) = &config.facebook.api_key {
-        env_content.push_str(&format!("APP__FACEBOOK__API_KEY={}\n", api_key));
-    }
-    if let Some(api_secret) = &config.facebook.api_secret {
-        env_content.push_str(&format!("APP__FACEBOOK__API_SECRET={}\n", api_secret));
-    }
-    if let Some(access_token) = &config.facebook.access_token {
-        env_content.push_str(&format!("APP__FACEBOOK__ACCESS_TOKEN={}\n", access_token));
-    }
 
+    // Instagram
+    env_content.push_str(&format!(
+        "APP__INSTAGRAM__ACCOUNT_ID={}\n",
+        config.instagram.account_id
+    ));
     // Instagram
     env_content.push_str(&format!(
         "APP__INSTAGRAM__ACCOUNT_ID={}\n",
@@ -249,15 +231,6 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
         "APP__INSTAGRAM__PASSWORD={}\n",
         config.instagram.password
     ));
-    if let Some(api_key) = &config.instagram.api_key {
-        env_content.push_str(&format!("APP__INSTAGRAM__API_KEY={}\n", api_key));
-    }
-    if let Some(api_secret) = &config.instagram.api_secret {
-        env_content.push_str(&format!("APP__INSTAGRAM__API_SECRET={}\n", api_secret));
-    }
-    if let Some(access_token) = &config.instagram.access_token {
-        env_content.push_str(&format!("APP__INSTAGRAM__ACCESS_TOKEN={}\n", access_token));
-    }
 
     // YouTube
     env_content.push_str(&format!(
@@ -272,18 +245,6 @@ pub fn generate_env_file(config: &AppConfig, env_path: &str) -> AppResult<()> {
         "APP__YOUTUBE__PASSWORD={}\n",
         config.youtube.password
     ));
-    if let Some(api_key) = &config.youtube.api_key {
-        env_content.push_str(&format!("APP__YOUTUBE__API_KEY={}\n", api_key));
-    }
-    if let Some(client_id) = &config.youtube.client_id {
-        env_content.push_str(&format!("APP__YOUTUBE__CLIENT_ID={}\n", client_id));
-    }
-    if let Some(client_secret) = &config.youtube.client_secret {
-        env_content.push_str(&format!("APP__YOUTUBE__CLIENT_SECRET={}\n", client_secret));
-    }
-    if let Some(refresh_token) = &config.youtube.refresh_token {
-        env_content.push_str(&format!("APP__YOUTUBE__REFRESH_TOKEN={}\n", refresh_token));
-    }
 
     // Content
     env_content.push_str(&format!(

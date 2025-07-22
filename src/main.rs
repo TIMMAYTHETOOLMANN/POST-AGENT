@@ -3,7 +3,7 @@ use log::{error, info, warn};
 use std::env;
 use tiktok_crosspost::config_wizard;
 use tiktok_crosspost::error::{AppError, AppResult};
-use tiktok_crosspost::{app, config, job_scheduler, platforms, scheduler, tiktok};
+use tiktok_crosspost::{app, browser_load_balancer, comprehensive_logging, config, config_watcher, content_backup, health_monitor, job_scheduler, network_resilience, platforms, scheduler, session_manager, tiktok, zero_downtime_deployment};
 use tokio::time::Duration;
 
 /// TikTok Cross-posting Application
@@ -128,8 +128,40 @@ async fn initialize_configuration() -> AppResult<config::AppConfig> {
 
 /// Initialize application components
 async fn initialize_components() -> AppResult<()> {
+    // Initialize comprehensive logging first
+    comprehensive_logging::init_comprehensive_logging().await?;
+    info!("Comprehensive logging system initialized");
+    
     scheduler::init().await?;
     info!("Scheduler database initialized");
+    
+    // Initialize session manager
+    session_manager::init_session_manager().await?;
+    info!("Session manager initialized");
+    
+    // Initialize health monitor
+    health_monitor::init_health_monitor().await?;
+    info!("Health monitor initialized");
+    
+    // Initialize configuration watcher
+    config_watcher::init_config_watcher().await?;
+    info!("Configuration watcher initialized");
+    
+    // Initialize network resilience
+    network_resilience::init_network_resilience().await?;
+    info!("Network resilience initialized");
+    
+    // Initialize content backup
+    content_backup::init_content_backup().await?;
+    info!("Content backup system initialized");
+    
+    // Initialize zero-downtime deployment
+    zero_downtime_deployment::init_zero_downtime_deployment().await?;
+    info!("Zero-downtime deployment system initialized");
+    
+    // Initialize browser load balancing
+    browser_load_balancer::init_browser_load_balancing().await?;
+    info!("Browser load balancing initialized");
     
     Ok(())
 }

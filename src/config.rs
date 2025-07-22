@@ -33,36 +33,24 @@ pub struct AppConfig {
     pub system: SystemConfig,
 }
 
-/// TikTok API configuration
+/// TikTok browser automation configuration
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct TikTokConfig {
     /// TikTok username to fetch content from
     pub username: String,
 
-    /// TikTok API key
-    pub api_key: String,
+    /// TikTok login email for browser automation
+    pub email: String,
 
-    /// TikTok API secret
-    pub api_secret: String,
-
-    /// TikTok access token
-    pub access_token: Option<String>,
+    /// TikTok login password for browser automation
+    pub password: String,
 }
 
-/// Facebook API configuration
+/// Facebook browser automation configuration
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct FacebookConfig {
     /// Facebook profile ID (for personal accounts) or page ID (for business)
     pub profile_id: String,
-
-    /// Facebook API key (optional, for hybrid approach)
-    pub api_key: Option<String>,
-
-    /// Facebook API secret (optional, for hybrid approach)
-    pub api_secret: Option<String>,
-
-    /// Facebook access token (optional, for hybrid approach)
-    pub access_token: Option<String>,
 
     /// Facebook login email for browser automation
     pub email: String,
@@ -71,20 +59,11 @@ pub struct FacebookConfig {
     pub password: String,
 }
 
-/// Instagram API configuration
+/// Instagram browser automation configuration
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct InstagramConfig {
     /// Instagram account ID
     pub account_id: String,
-
-    /// Instagram API key (optional, for hybrid approach)
-    pub api_key: Option<String>,
-
-    /// Instagram API secret (optional, for hybrid approach)
-    pub api_secret: Option<String>,
-
-    /// Instagram access token (optional, for hybrid approach)
-    pub access_token: Option<String>,
 
     /// Instagram login email for browser automation
     pub email: String,
@@ -93,23 +72,11 @@ pub struct InstagramConfig {
     pub password: String,
 }
 
-/// YouTube API configuration
+/// YouTube browser automation configuration
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct YouTubeConfig {
     /// YouTube channel ID
     pub channel_id: String,
-
-    /// YouTube API key (optional, for hybrid approach)
-    pub api_key: Option<String>,
-
-    /// YouTube client ID (optional, for hybrid approach)
-    pub client_id: Option<String>,
-
-    /// YouTube client secret (optional, for hybrid approach)
-    pub client_secret: Option<String>,
-
-    /// YouTube refresh token (optional, for hybrid approach)
-    pub refresh_token: Option<String>,
 
     /// YouTube login email for browser automation
     pub email: String,
@@ -191,32 +158,21 @@ impl Default for AppConfig {
         Self {
             tiktok: TikTokConfig {
                 username: "".to_string(),
-                api_key: "".to_string(),
-                api_secret: "".to_string(),
-                access_token: None,
+                email: "".to_string(),
+                password: "".to_string(),
             },
             facebook: FacebookConfig {
                 profile_id: "".to_string(),
-                api_key: None,
-                api_secret: None,
-                access_token: None,
                 email: "".to_string(),
                 password: "".to_string(),
             },
             instagram: InstagramConfig {
                 account_id: "".to_string(),
-                api_key: None,
-                api_secret: None,
-                access_token: None,
                 email: "".to_string(),
                 password: "".to_string(),
             },
             youtube: YouTubeConfig {
                 channel_id: "".to_string(),
-                api_key: None,
-                client_id: None,
-                client_secret: None,
-                refresh_token: None,
                 email: "".to_string(),
                 password: "".to_string(),
             },
@@ -319,11 +275,11 @@ pub fn validate_config(config: &AppConfig) -> Result<()> {
     if config.tiktok.username.is_empty() {
         errors.push("TikTok username cannot be empty");
     }
-    if config.tiktok.api_key.is_empty() {
-        errors.push("TikTok API key cannot be empty");
+    if config.tiktok.email.is_empty() {
+        errors.push("TikTok email cannot be empty");
     }
-    if config.tiktok.api_secret.is_empty() {
-        errors.push("TikTok API secret cannot be empty");
+    if config.tiktok.password.is_empty() {
+        errors.push("TikTok password cannot be empty");
     }
 
     // Scheduler validation

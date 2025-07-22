@@ -1,305 +1,352 @@
+use crate::browser::BrowserManager;
 use crate::config;
 use crate::error::{AppError, AppResult};
-use chrono::{DateTime, Utc};
-use log::info;
+use headless_chrome::Tab;
+use log::{info, warn};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::fs;
+use tokio::time::sleep;
 
-/// Represents a TikTok video with all its metadata
+/// Represents a TikTok video
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TikTokVideo {
-    /// Unique identifier for the video
     pub id: String,
-
-    /// URL to the video on TikTok
-    pub url: String,
-
-    /// Description/caption of the video
+    pub title: String,
     pub description: String,
-
-    /// Creation timestamp
-    pub created_at: DateTime<Utc>,
-
-    /// Number of likes
-    pub likes: u64,
-
-    /// Number of comments
-    pub comments: u64,
-
-    /// Number of shares
-    pub shares: u64,
-
-    /// Number of views
-    pub views: u64,
-
-    /// Duration of the video in seconds
-    pub duration: f64,
-
-    /// URL to the video file
     pub video_url: String,
-
-    /// URL to the cover image
-    pub cover_url: String,
-
-    /// Original hashtags used in the video
+    pub cover_image_url: String,
+    pub duration: u64,
+    pub view_count: u64,
+    pub like_count: u64,
+    pub share_count: u64,
+    pub comment_count: u64,
+    pub create_time: u64,
     pub hashtags: Vec<String>,
-
-    /// Path to the downloaded video file (if downloaded)
-    pub local_video_path: Option<PathBuf>,
-
-    /// Path to the downloaded cover image (if downloaded)
-    pub local_cover_path: Option<PathBuf>,
-
-    /// Whether this video has been processed and posted
-    pub is_posted: bool,
+    pub local_video_path: Option<String>,
+    pub local_cover_path: Option<String>,
 }
 
-/// Fetches all TikTok videos from the configured account
-pub async fn fetch_all_videos() -> AppResult<Vec<TikTokVideo>> {
-    info!("Fetching all TikTok videos");
+/// Browser automation for TikTok
+pub struct TikTokBrowser {
+    manager: BrowserManager,
+    tab: Arc<Tab>,
+}
+
+impl TikTokBrowser {
+    pub async fn new() -> AppResult<Self> {
+        info!("Initializing TikTok browser automation");
+        
+        let manager = BrowserManager::new()?;
+        let tab = manager.new_tab()?;
+        
+        Ok(Self { manager, tab })
+    }
+
+    pub async fn login(&mut self, email: &str, password: &str) -> AppResult<()> {
+        info!("Logging into TikTok with email: {}", email);
+        
+        // Navigate to TikTok login page
+        self.manager.navigate_with_retry(&self.tab, "https://www.tiktok.com/login/phone-or-email/email").await?;
+        
+        // Fill in email
+        self.manager.wait_for_element_with_retry(&self.tab, "input[name='username']").await?;
+        self.manager.type_text_with_retry(&self.tab, "input[name='username']", email).await?;
+        
+        // Fill in password
+        self.manager.type_text_with_retry(&self.tab, "input[type='password']", password).await?;
+        
+        // Click login button
+        self.manager.click_with_retry(&self.tab, "button[data-e2e='login-button']").await?;
+        
+        // Wait for successful login
+        self.manager.wait(Duration::from_secs(5)).await;
+        
+        info!("Successfully logged into TikTok");
+        Ok(())
+    }
+
+    pub async fn navigate_to_profile(&mut self, username: &str) -> AppResult<()> {
+        info!("Navigating to TikTok profile: @{}", username);
+        
+        let profile_url = format!("https://www.tiktok.com/@{}", username);
+        self.manager.navigate_with_retry(&self.tab, &profile_url).await?;
+        
+        // Wait for profile to load
+        self.manager.wait_for_element_with_retry(&self.tab, "div[data-e2e='user-page']").await?;
+        
+        Ok(())
+    }
+
+    pub async fn extract_video_urls(&mut self) -> AppResult<Vec<String>> {
+        info!("Extracting video URLs from profile page");
+        
+        // Scroll down to load more videos
+        for _ in 0..5 {
+            self.tab.evaluate("window.scrollTo(0, document.body.scrollHeight)", false)
+                .map_err(|e| AppError::GenericError(format!("Failed to scroll: {}", e)))?;
+            self.manager.wait(Duration::from_secs(2)).await;
+        }
+
+        // Extract video links
+        let video_urls_result = self.tab.evaluate(r#"
+            Array.from(document.querySelectorAll('a[href*="/video/"]')).map(a => a.href)
+        "#, false).map_err(|e| AppError::GenericError(format!("Failed to extract video URLs: {}", e)))?;
+
+        // Parse the result
+        let video_urls: Vec<String> = if let Some(value) = video_urls_result.value {
+            serde_json::from_value(value)
+                .map_err(|e| AppError::GenericError(format!("Failed to parse video URLs: {}", e)))?
+        } else {
+            Vec::new()
+        };
+
+        info!("Found {} video URLs", video_urls.len());
+        Ok(video_urls)
+    }
+
+    pub async fn extract_video_metadata(&mut self, video_url: &str) -> AppResult<TikTokVideo> {
+        info!("Extracting metadata for video: {}", video_url);
+        
+        self.manager.navigate_with_retry(&self.tab, video_url).await?;
+        
+        // Wait for video to load
+        self.manager.wait_for_element_with_retry(&self.tab, "div[data-e2e='video-player']").await?;
+        
+        // Extract video metadata using JavaScript
+        let metadata_result = self.tab.evaluate(r#"
+            (function() {
+                try {
+                    // Extract video ID from URL
+                    const videoId = window.location.pathname.split('/').pop();
+                    
+                    // Extract title and description
+                    const titleElement = document.querySelector('h1[data-e2e="browse-video-desc"]') || 
+                                        document.querySelector('[data-e2e="video-desc"]');
+                    const title = titleElement ? titleElement.textContent.trim() : '';
+                    
+                    // Extract stats
+                    const likesElement = document.querySelector('[data-e2e="like-count"]');
+                    const commentsElement = document.querySelector('[data-e2e="comment-count"]');
+                    const sharesElement = document.querySelector('[data-e2e="share-count"]');
+                    
+                    const likes = likesElement ? parseInt(likesElement.textContent.replace(/\D/g, '')) || 0 : 0;
+                    const comments = commentsElement ? parseInt(commentsElement.textContent.replace(/\D/g, '')) || 0 : 0;
+                    const shares = sharesElement ? parseInt(sharesElement.textContent.replace(/\D/g, '')) || 0 : 0;
+                    
+                    // Extract video source URL
+                    const videoElement = document.querySelector('video');
+                    const videoSrc = videoElement ? videoElement.src : '';
+                    
+                    // Extract cover image
+                    const coverElement = videoElement ? videoElement.poster : '';
+                    
+                    // Extract hashtags
+                    const hashtagElements = document.querySelectorAll('a[href*="/tag/"]');
+                    const hashtags = Array.from(hashtagElements).map(el => el.textContent.trim());
+                    
+                    return {
+                        id: videoId,
+                        title: title,
+                        description: title,
+                        video_url: videoSrc,
+                        cover_image_url: coverElement,
+                        duration: videoElement ? Math.floor(videoElement.duration) || 0 : 0,
+                        view_count: 0, // Views not easily accessible
+                        like_count: likes,
+                        share_count: shares,
+                        comment_count: comments,
+                        create_time: Math.floor(Date.now() / 1000),
+                        hashtags: hashtags
+                    };
+                } catch (error) {
+                    return { error: error.message };
+                }
+            })()
+        "#, false).map_err(|e| AppError::GenericError(format!("Failed to extract metadata: {}", e)))?;
+
+        let metadata: HashMap<String, serde_json::Value> = if let Some(value) = metadata_result.value {
+            serde_json::from_value(value)
+                .map_err(|e| AppError::GenericError(format!("Failed to parse metadata: {}", e)))?
+        } else {
+            return Err(AppError::GenericError("No metadata returned from JavaScript".to_string()));
+        };
+
+        if let Some(error) = metadata.get("error") {
+            return Err(AppError::GenericError(format!("JavaScript error: {}", error)));
+        }
+
+        let video = TikTokVideo {
+            id: metadata.get("id").and_then(|v| v.as_str()).unwrap_or("unknown").to_string(),
+            title: metadata.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            description: metadata.get("description").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            video_url: metadata.get("video_url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            cover_image_url: metadata.get("cover_image_url").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+            duration: metadata.get("duration").and_then(|v| v.as_u64()).unwrap_or(0),
+            view_count: metadata.get("view_count").and_then(|v| v.as_u64()).unwrap_or(0),
+            like_count: metadata.get("like_count").and_then(|v| v.as_u64()).unwrap_or(0),
+            share_count: metadata.get("share_count").and_then(|v| v.as_u64()).unwrap_or(0),
+            comment_count: metadata.get("comment_count").and_then(|v| v.as_u64()).unwrap_or(0),
+            create_time: metadata.get("create_time").and_then(|v| v.as_u64()).unwrap_or(0),
+            hashtags: metadata.get("hashtags")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|v| v.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default(),
+            local_video_path: None,
+            local_cover_path: None,
+        };
+
+        info!("Extracted metadata for video: {}", video.id);
+        Ok(video)
+    }
+
+    pub async fn verify_authentication(&mut self) -> AppResult<()> {
+        info!("Verifying TikTok authentication");
+        
+        // Check if we're still logged in by looking for profile elements
+        self.manager.navigate_with_retry(&self.tab, "https://www.tiktok.com/foryou").await?;
+        self.manager.wait_for_element_with_retry(&self.tab, "div[data-e2e='recommend-list-item']").await?;
+        
+        Ok(())
+    }
+}
+
+/// Authenticate with TikTok using browser automation
+pub async fn authenticate() -> AppResult<()> {
+    info!("Authenticating with TikTok via browser automation");
 
     let config = config::get_config();
-    let username = &config.tiktok.username;
-    let _api_key = &config.tiktok.api_key;
+    let tiktok_config = &config.tiktok;
 
-    info!("Fetching videos for TikTok user: {}", username);
-
-    let client = Client::new();
+    let mut browser = TikTokBrowser::new().await?;
     
-    // Use TikTok API to fetch all videos
-    let url = format!("https://open.tiktokapis.com/v2/video/list/");
+    // Test login
+    browser.login(&tiktok_config.email, &tiktok_config.password).await?;
     
-    let response = client
-        .post(&url)
-        .header("Authorization", format!("Bearer {}", config.tiktok.access_token.as_ref().unwrap_or(&"".to_string())))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
-            "max_count": 100,
-            "fields": ["id", "title", "video_description", "duration", "cover_image_url", "embed_link", "create_time", "like_count", "comment_count", "share_count", "view_count"]
-        }))
-        .send()
-        .await
-        .map_err(|e| AppError::ApiError(format!("Failed to fetch videos: {}", e)))?;
-
-    if !response.status().is_success() {
-        return Err(AppError::ApiError(format!("TikTok API error: {}", response.status())));
-    }
-
-    let json: serde_json::Value = response.json().await
-        .map_err(|e| AppError::ApiError(format!("Failed to parse API response: {}", e)))?;
-
-    let mut videos = Vec::new();
+    // Verify authentication was successful
+    browser.verify_authentication().await?;
     
-    if let Some(data) = json.get("data").and_then(|d| d.get("videos")).and_then(|v| v.as_array()) {
-        for video_data in data {
-            if let Some(video) = parse_tiktok_video(video_data, username)? {
-                videos.push(video);
-            }
-        }
-    }
-
-    // Sort by creation date (oldest first)
-    videos.sort_by(|a, b| a.created_at.cmp(&b.created_at));
-
-    info!("Fetched {} TikTok videos", videos.len());
-
-    Ok(videos)
-}
-
-/// Fetches only new TikTok videos that haven't been processed yet
-pub async fn fetch_new_videos() -> AppResult<Vec<TikTokVideo>> {
-    info!("Fetching new TikTok videos");
-
-    let config = config::get_config();
-    let username = &config.tiktok.username;
-
-    info!("Checking for new videos for TikTok user: {}", username);
-
-    let client = Client::new();
-    
-    // Use TikTok API to fetch recent videos
-    let url = format!("https://open.tiktokapis.com/v2/video/list/");
-    
-    let response = client
-        .post(&url)
-        .header("Authorization", format!("Bearer {}", config.tiktok.access_token.as_ref().unwrap_or(&"".to_string())))
-        .header("Content-Type", "application/json")
-        .json(&serde_json::json!({
-            "max_count": 20,
-            "fields": ["id", "title", "video_description", "duration", "cover_image_url", "embed_link", "create_time", "like_count", "comment_count", "share_count", "view_count"]
-        }))
-        .send()
-        .await
-        .map_err(|e| AppError::ApiError(format!("Failed to fetch videos: {}", e)))?;
-
-    if !response.status().is_success() {
-        return Err(AppError::ApiError(format!("TikTok API error: {}", response.status())));
-    }
-
-    let json: serde_json::Value = response.json().await
-        .map_err(|e| AppError::ApiError(format!("Failed to parse API response: {}", e)))?;
-
-    let mut videos = Vec::new();
-    
-    if let Some(data) = json.get("data").and_then(|d| d.get("videos")).and_then(|v| v.as_array()) {
-        for video_data in data {
-            if let Some(video) = parse_tiktok_video(video_data, username)? {
-                videos.push(video);
-            }
-        }
-    }
-
-    // Sort by creation date (newest first for new videos)
-    videos.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-
-    info!("Fetched {} new TikTok videos", videos.len());
-
-    Ok(videos)
-}
-
-/// Downloads the video and cover image for a TikTok video
-pub async fn download_video_content(video: &mut TikTokVideo) -> AppResult<()> {
-    info!("Downloading content for TikTok video: {}", video.id);
-
-    // Create directory for downloads if it doesn't exist
-    let download_dir = PathBuf::from("downloads");
-    if !download_dir.exists() {
-        fs::create_dir_all(&download_dir).await?;
-    }
-
-    let client = Client::new();
-
-    // Download video
-    let video_path = download_dir.join(format!("{}.mp4", video.id));
-    let video_bytes = client
-        .get(&video.video_url)
-        .timeout(Duration::from_secs(60))
-        .send()
-        .await
-        .map_err(|e| AppError::MediaDownloadError(format!("Failed to download video: {}", e)))?
-        .bytes()
-        .await
-        .map_err(|e| AppError::MediaDownloadError(format!("Failed to read video bytes: {}", e)))?;
-
-    fs::write(&video_path, video_bytes).await?;
-    video.local_video_path = Some(video_path);
-
-    // Download cover image
-    let cover_path = download_dir.join(format!("{}.jpg", video.id));
-    let cover_bytes = client
-        .get(&video.cover_url)
-        .timeout(Duration::from_secs(30))
-        .send()
-        .await
-        .map_err(|e| AppError::MediaDownloadError(format!("Failed to download cover: {}", e)))?
-        .bytes()
-        .await
-        .map_err(|e| AppError::MediaDownloadError(format!("Failed to read cover bytes: {}", e)))?;
-
-    fs::write(&cover_path, cover_bytes).await?;
-    video.local_cover_path = Some(cover_path);
-
-    info!(
-        "Successfully downloaded content for TikTok video: {}",
-        video.id
-    );
-
+    info!("TikTok authentication completed successfully");
     Ok(())
 }
 
-/// Parse TikTok video data from API response
-fn parse_tiktok_video(video_data: &serde_json::Value, username: &str) -> AppResult<Option<TikTokVideo>> {
-    let id = video_data.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let _title = video_data.get("title").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let description = video_data.get("video_description").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let duration = video_data.get("duration").and_then(|v| v.as_f64()).unwrap_or(0.0);
-    let cover_url = video_data.get("cover_image_url").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let embed_link = video_data.get("embed_link").and_then(|v| v.as_str()).unwrap_or("").to_string();
-    let create_time = video_data.get("create_time").and_then(|v| v.as_i64()).unwrap_or(0);
-    let like_count = video_data.get("like_count").and_then(|v| v.as_u64()).unwrap_or(0);
-    let comment_count = video_data.get("comment_count").and_then(|v| v.as_u64()).unwrap_or(0);
-    let share_count = video_data.get("share_count").and_then(|v| v.as_u64()).unwrap_or(0);
-    let view_count = video_data.get("view_count").and_then(|v| v.as_u64()).unwrap_or(0);
-
-    if id.is_empty() {
-        return Ok(None);
-    }
-
-    // Parse hashtags from description
-    let hashtags = extract_hashtags(&description);
-
-    // Convert timestamp to DateTime
-    let created_at = DateTime::from_timestamp(create_time, 0)
-        .unwrap_or_else(|| Utc::now());
-
-    let video = TikTokVideo {
-        id,
-        url: embed_link,
-        description,
-        created_at,
-        likes: like_count,
-        comments: comment_count,
-        shares: share_count,
-        views: view_count,
-        duration,
-        video_url: format!("https://www.tiktok.com/@{}/video/{}", username, video_data.get("id").and_then(|v| v.as_str()).unwrap_or("")),
-        cover_url,
-        hashtags,
-        local_video_path: None,
-        local_cover_path: None,
-        is_posted: false,
-    };
-
-    Ok(Some(video))
-}
-
-/// Extract hashtags from description text
-fn extract_hashtags(description: &str) -> Vec<String> {
-    let mut hashtags = Vec::new();
-    let words: Vec<&str> = description.split_whitespace().collect();
-    
-    for word in words {
-        if word.starts_with('#') && word.len() > 1 {
-            hashtags.push(word[1..].to_string());
-        }
-    }
-    
-    hashtags
-}
-
-/// Authenticates with the TikTok API
-pub async fn authenticate() -> AppResult<()> {
-    info!("Authenticating with TikTok API");
+/// Fetches all TikTok videos from the configured account using browser automation
+pub async fn fetch_all_videos() -> AppResult<Vec<TikTokVideo>> {
+    info!("Fetching all TikTok videos using browser automation");
 
     let config = config::get_config();
-    let client = Client::new();
+    let username = &config.tiktok.username;
 
-    // Use TikTok API for authentication
-    let url = "https://open.tiktokapis.com/v2/oauth/token/";
+    info!("Fetching videos for TikTok user: {}", username);
+
+    let mut browser = TikTokBrowser::new().await?;
     
-    let response = client
-        .post(url)
-        .header("Content-Type", "application/x-www-form-urlencoded")
-        .form(&[
-            ("client_key", &config.tiktok.api_key),
-            ("client_secret", &config.tiktok.api_secret),
-            ("grant_type", &"client_credentials".to_string()),
-        ])
-        .send()
-        .await
-        .map_err(|e| AppError::AuthenticationError(format!("Failed to authenticate: {}", e)))?;
-
-    if !response.status().is_success() {
-        return Err(AppError::AuthenticationError(format!("TikTok authentication failed: {}", response.status())));
+    // Login to TikTok
+    browser.login(&config.tiktok.email, &config.tiktok.password).await?;
+    
+    // Navigate to user profile
+    browser.navigate_to_profile(username).await?;
+    
+    // Extract video URLs
+    let video_urls = browser.extract_video_urls().await?;
+    
+    // Extract metadata for each video
+    let mut videos = Vec::new();
+    for video_url in video_urls.iter().take(20) { // Limit to 20 videos for performance
+        match browser.extract_video_metadata(video_url).await {
+            Ok(video) => videos.push(video),
+            Err(e) => {
+                warn!("Failed to extract metadata for {}: {}", video_url, e);
+                continue;
+            }
+        }
+        
+        // Small delay between requests
+        sleep(Duration::from_secs(1)).await;
     }
 
-    let _json: serde_json::Value = response.json().await
-        .map_err(|e| AppError::AuthenticationError(format!("Failed to parse auth response: {}", e)))?;
+    info!("Successfully fetched {} TikTok videos", videos.len());
+    Ok(videos)
+}
 
-    info!("Successfully authenticated with TikTok API");
+/// Fetches new TikTok videos that haven't been processed yet using browser automation
+pub async fn fetch_new_videos() -> AppResult<Vec<TikTokVideo>> {
+    info!("Fetching new TikTok videos using browser automation");
+
+    // For simplicity, we'll fetch all videos and let the scheduler filter out already processed ones
+    fetch_all_videos().await
+}
+
+/// Downloads video content for a TikTok video
+pub async fn download_video_content(video: &mut TikTokVideo) -> AppResult<()> {
+    info!("Downloading content for video: {}", video.id);
+
+    // Create downloads directory if it doesn't exist
+    fs::create_dir_all("downloads").await.map_err(|e| {
+        AppError::GenericError(format!("Failed to create downloads directory: {}", e))
+    })?;
+
+    let client = Client::new();
+
+    // Download video file
+    if !video.video_url.is_empty() {
+        let video_filename = format!("downloads/{}_video.mp4", video.id);
+        
+        match client.get(&video.video_url).send().await {
+            Ok(response) => {
+                if response.status().is_success() {
+                    let content = response.bytes().await.map_err(|e| {
+                        AppError::GenericError(format!("Failed to read video content: {}", e))
+                    })?;
+                    
+                    fs::write(&video_filename, content).await.map_err(|e| {
+                        AppError::GenericError(format!("Failed to write video file: {}", e))
+                    })?;
+                    
+                    video.local_video_path = Some(video_filename);
+                    info!("Downloaded video file for: {}", video.id);
+                } else {
+                    warn!("Failed to download video for {}: HTTP {}", video.id, response.status());
+                }
+            }
+            Err(e) => {
+                warn!("Failed to download video for {}: {}", video.id, e);
+            }
+        }
+    }
+
+    // Download cover image
+    if !video.cover_image_url.is_empty() {
+        let cover_filename = format!("downloads/{}_cover.jpg", video.id);
+        
+        match client.get(&video.cover_image_url).send().await {
+            Ok(response) => {
+                if response.status().is_success() {
+                    let content = response.bytes().await.map_err(|e| {
+                        AppError::GenericError(format!("Failed to read cover content: {}", e))
+                    })?;
+                    
+                    fs::write(&cover_filename, content).await.map_err(|e| {
+                        AppError::GenericError(format!("Failed to write cover file: {}", e))
+                    })?;
+                    
+                    video.local_cover_path = Some(cover_filename);
+                    info!("Downloaded cover image for: {}", video.id);
+                } else {
+                    warn!("Failed to download cover for {}: HTTP {}", video.id, response.status());
+                }
+            }
+            Err(e) => {
+                warn!("Failed to download cover for {}: {}", video.id, e);
+            }
+        }
+    }
+
+    // Add small delay to avoid rate limiting
+    sleep(Duration::from_millis(500)).await;
 
     Ok(())
 }

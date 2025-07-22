@@ -1,0 +1,53 @@
+[tiktok]
+username = ""
+api_key = ""
+api_secret = ""
+
+[facebook]
+profile_id = ""
+email = ""
+password = ""
+
+[instagram]
+account_id = ""
+email = ""
+password = ""
+
+[youtube]
+channel_id = ""
+email = ""
+password = ""
+
+[content]
+hashtag_count = 10
+custom_hashtags = [
+    "fyp",
+    "viral",
+    "trending",
+]
+tagline_templates = [
+    "You won't believe what happens next! 😱",
+    "This changed everything for me! 🔥",
+    "Wait for it... 👀",
+    "Mind blown! 🤯",
+    "This is insane! 🚀",
+]
+use_trending_hashtags = true
+
+[scheduler]
+check_interval_minutes = 10
+legacy_post_interval_minutes = 10
+max_posts_per_day = 144
+
+[browser]
+headless = true
+page_load_timeout = 30
+element_wait_timeout = 10
+max_retries = 3
+retry_delay_ms = 2000
+window_width = 1920
+window_height = 1080
+
+[system]
+automation_mode = "playwright"
+debug = false
